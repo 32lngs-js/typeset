@@ -16,34 +16,16 @@
     @font-face { font-family: 'Söhne'; src: url('fonts/sohne/sohne-700.otf') format('opentype'); font-weight: 700; font-style: normal; font-display: swap; }
     @font-face { font-family: 'Söhne'; src: url('fonts/sohne/sohne-800.otf') format('opentype'); font-weight: 800; font-style: normal; font-display: swap; }
     @font-face { font-family: 'Söhne'; src: url('fonts/sohne/sohne-900.otf') format('opentype'); font-weight: 900; font-style: normal; font-display: swap; }
-  </style>
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; font-family: 'Inter', system-ui, sans-serif; background: #f5f5f3; overflow: auto; }
 
-    html, body {
-      height: 100%;
-      font-family: 'Inter', system-ui, sans-serif;
-      background: #f5f5f3;
-      overflow: auto;
-    }
-
-    /* ══════════════════════════════
-       PREVIEW
-    ══════════════════════════════ */
-    .preview {
-      padding: 80px 88px;
-      display: flex;
-      flex-direction: column;
-      gap: 52px;
-      min-height: 100vh;
-    }
+    /* ══ PREVIEW ══ */
+    .preview { padding: 80px 88px; display: flex; flex-direction: column; gap: 52px; min-height: 100vh; }
 
     .text-el {
-      cursor: pointer;
-      outline: none;
-      border-radius: 4px;
-      padding: 2px 4px;
-      margin: -2px -4px;
-      display: inline-block;
+      cursor: pointer; outline: none; border-radius: 4px;
+      padding: 2px 4px; margin: -2px -4px; display: inline-block;
       transition: box-shadow 0.12s ease;
     }
     .text-el:hover  { box-shadow: 0 0 0 1px rgba(0,102,255,0.25); }
@@ -56,9 +38,7 @@
     .text-el[data-id="caption"]    { font-family:'Inter',sans-serif; font-size:11px; font-weight:500; line-height:1.4; letter-spacing:0.1em; text-transform:uppercase; color:#888; }
     .text-el[data-id="mono"]       { font-family:'Geist Mono',monospace; font-size:13px; font-weight:400; line-height:1.6; letter-spacing:0; color:#666; }
 
-    /* ══════════════════════════════
-       PANEL — CSS vars for theming
-    ══════════════════════════════ */
+    /* ══ PANEL ══ */
     #panel {
       --bg:         #141414;
       --bg-hover:   rgba(255,255,255,0.06);
@@ -86,33 +66,23 @@
       --ring:       rgba(255,255,255,0.1);
       --shadow:     rgba(0,0,0,0.6);
       --icon-col:   rgba(255,255,255,0.3);
-      --dial-bg:    rgba(255,255,255,0.95);
-      --dial-icon:  #333;
+      --dial-bg:    #141414;
+      --dial-icon:  rgba(255,255,255,0.85);
 
       position: fixed;
       width: 260px;
       background: var(--bg);
       border-radius: 14px;
-      box-shadow:
-        0 0 0 0.5px var(--ring),
-        0 16px 48px var(--shadow),
-        0 4px 12px rgba(0,0,0,0.35);
-      overflow: hidden;
+      box-shadow: 0 0 0 0.5px var(--ring), 0 16px 48px var(--shadow), 0 4px 12px rgba(0,0,0,0.35);
+      overflow: visible;
       z-index: 9999;
       user-select: none;
       right: 20px;
       top: 80px;
-
-      /* morph transition */
-      transition:
-        width      0.22s cubic-bezier(0.4,0,0.2,1),
-        height     0.22s cubic-bezier(0.4,0,0.2,1),
-        border-radius 0.22s cubic-bezier(0.4,0,0.2,1),
-        background 0.18s ease,
-        box-shadow 0.22s ease;
+      transition: width 0.22s cubic-bezier(0.4,0,0.2,1), height 0.22s cubic-bezier(0.4,0,0.2,1), border-radius 0.22s cubic-bezier(0.4,0,0.2,1), background 0.18s ease, box-shadow 0.22s ease;
     }
+    .panel-inner { border-radius: 14px; overflow: hidden; }
 
-    /* ── Light panel theme ── */
     #panel.panel-light {
       --bg:         #ffffff;
       --bg-hover:   rgba(0,0,0,0.05);
@@ -144,385 +114,345 @@
       --dial-icon:  #fff;
     }
 
-    /* ── Minimized — morphs to circle ── */
+    /* Minimized — morphs to icon at top-right home position */
     #panel.minimized {
-      width:  36px;
-      height: 36px;
-      border-radius: 50%;
+      width: 36px; height: 36px; border-radius: 50%;
+      top: 20px; right: 20px; /* always homes here */
       background: var(--dial-bg);
       box-shadow: 0 2px 12px rgba(0,0,0,0.22), 0 0 0 0.5px rgba(0,0,0,0.08);
       cursor: pointer;
     }
 
-    /* crosshair shown only when minimized */
     .dial-icon {
-      position: absolute;
-      inset: 0;
+      position: absolute; inset: 0;
       display: flex; align-items: center; justify-content: center;
-      opacity: 0;
-      transition: opacity 0.12s ease;
-      pointer-events: none;
-      color: var(--dial-icon);
+      opacity: 0; transition: opacity 0.12s ease;
+      pointer-events: none; color: var(--dial-icon);
     }
     #panel.minimized .dial-icon { opacity: 1; }
-
-    /* header + body hidden when minimized */
     #panel.minimized .ph,
-    #panel.minimized .pb {
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.08s ease;
-    }
+    #panel.minimized .pb { opacity: 0; pointer-events: none; transition: opacity 0.08s ease; }
     .ph, .pb { transition: opacity 0.14s ease 0.06s; }
 
-    /* ── Header ── */
+    /* Header */
     .ph {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 12px 9px;
-      cursor: grab;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 12px 9px; cursor: grab;
       border-bottom: 0.5px solid var(--border);
     }
     .ph:active { cursor: grabbing; }
+    .ph-title { font-size: 12px; font-weight: 600; color: var(--text-hi); letter-spacing: -0.01em; }
+    .ph-right { display: flex; align-items: center; gap: 5px; }
 
-    .ph-title {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-hi);
-      letter-spacing: -0.01em;
+    /* Version picker */
+    .version-wrap { position: relative; }
+    .version-btn {
+      font-size: 10px; font-weight: 500; color: var(--badge-col);
+      background: var(--badge-bg); border: none; border-radius: 100px;
+      padding: 2px 7px; cursor: pointer;
+      display: flex; align-items: center; gap: 3px;
+      transition: background 0.12s, color 0.12s; font-family: inherit;
     }
-
-    .ph-right {
-      display: flex;
-      align-items: center;
-      gap: 5px;
+    .version-btn:hover { background: var(--chip-hover); color: var(--text-hi); }
+    .version-menu {
+      position: absolute; top: calc(100% + 6px); right: 0;
+      background: var(--bg); border: 0.5px solid var(--border);
+      border-radius: 10px; box-shadow: 0 8px 28px rgba(0,0,0,0.45);
+      min-width: 130px; overflow: hidden;
+      display: none; z-index: 100;
     }
-
-    .badge {
-      font-size: 10px;
-      color: var(--badge-col);
-      background: var(--badge-bg);
-      padding: 2px 7px;
-      border-radius: 100px;
-      letter-spacing: 0.02em;
+    .version-menu.open { display: block; }
+    .version-item {
+      padding: 7px 12px; font-size: 11px; color: var(--text-mid);
+      cursor: pointer; display: flex; align-items: center; justify-content: space-between;
+      transition: background 0.1s, color 0.1s; gap: 8px;
     }
+    .version-item:hover { background: var(--bg-hover); color: var(--text-hi); }
+    .version-item.current { color: var(--text-hi); }
+    .ver-check { color: #4ade80; font-size: 10px; flex-shrink: 0; display: none; }
+    .version-item.current .ver-check { display: block; }
+    .version-sep { height: 0.5px; background: var(--border-sub); margin: 2px 0; }
+    .version-add-row {
+      padding: 7px 12px; font-size: 11px; color: var(--text-lo);
+      cursor: pointer; transition: background 0.1s, color 0.1s;
+    }
+    .version-add-row:hover { background: var(--bg-hover); color: var(--text-hi); }
 
     .icon-btn {
-      width: 22px; height: 22px;
-      display: flex; align-items: center; justify-content: center;
-      border: none; background: none; cursor: pointer;
-      border-radius: 6px;
-      color: var(--icon-col);
-      transition: color 0.12s, background 0.12s;
+      width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
+      border: none; background: none; cursor: pointer; border-radius: 6px;
+      color: var(--icon-col); transition: color 0.12s, background 0.12s;
     }
     .icon-btn:hover { background: var(--bg-hover); color: var(--text-hi); }
 
-    /* ── Panel body ── */
-    .pb {
-      overflow-y: auto;
-      max-height: calc(100vh - 160px);
+    /* Copy button in header */
+    .copy-btn {
+      width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
+      background: none; border: none; cursor: pointer; border-radius: 6px;
+      color: var(--icon-col); transition: color 0.12s, background 0.12s;
     }
+    .copy-btn:hover { background: var(--bg-hover); color: var(--text-hi); }
+    .copy-btn.copied { color: #4ade80; }
 
-    .no-sel {
-      padding: 24px 0;
-      text-align: center;
-      font-size: 11px;
-      color: var(--text-lo);
-      letter-spacing: 0.04em;
+    /* Panel body */
+    .pb { overflow-y: auto; max-height: calc(100vh - 160px); }
+
+    /* "Select text to edit" hint */
+    .select-hint {
+      font-size: 11px; color: var(--text-mid);
+      text-align: center; padding: 14px 0 10px;
+      letter-spacing: 0.04em; display: none;
     }
+    .select-hint.visible { display: block; }
 
-    /* ── Section header ── */
+    /* Controls — always rendered, dimmed when nothing selected */
+    #controls { transition: opacity 0.15s; }
+    #controls.disabled { opacity: 0.22; pointer-events: none; }
+
+    /* Section header */
     .section-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 8px 12px 6px;
-      border-top: 0.5px solid var(--border-sub);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 12px 6px; border-top: 0.5px solid var(--border-sub);
     }
     .section-head span {
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: var(--text-lo);
+      font-size: 10px; font-weight: 600; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--text-lo);
     }
 
-    /* ══════════════════════════════
-       SCRUBBER ROWS
-    ══════════════════════════════ */
-    .row {
-      display: flex;
-      align-items: center;
-      padding: 4px 10px;
-      gap: 8px;
-      min-height: 34px;
-    }
+    /* Scrubber rows */
+    .row { display: flex; align-items: center; padding: 4px 10px; gap: 8px; min-height: 34px; }
     .row + .row { border-top: 0.5px solid var(--border-row); }
 
     .row-label {
-      flex-shrink: 0;
-      font-size: 11px;
-      font-weight: 500;
-      color: var(--text-mid);
-      background: var(--chip-bg);
-      border-radius: 6px;
-      padding: 4px 9px;
-      cursor: ew-resize;
-      white-space: nowrap;
-      transition: background 0.12s, color 0.12s;
-      border: 0.5px solid var(--chip-bdr);
+      flex-shrink: 0; font-size: 11px; font-weight: 500; color: var(--text-mid);
+      background: var(--chip-bg); border-radius: 6px; padding: 4px 9px;
+      cursor: ew-resize; white-space: nowrap;
+      transition: background 0.12s, color 0.12s; border: 0.5px solid var(--chip-bdr);
     }
     .row-label:hover { background: var(--chip-hover); color: var(--text-hi); }
     .row-label.scrubbing { background: var(--chip-scr); color: var(--text-hi); }
 
-    .row-val {
-      flex: 1;
-      text-align: right;
-      font-size: 11px;
-      font-weight: 400;
-      color: var(--text-val);
-      font-family: 'Fragment Mono', 'Geist Mono', monospace;
-      cursor: default;
-    }
-
-    .row-input {
-      flex: 1;
-      text-align: right;
-      background: none;
-      border: none;
-      outline: none;
-      font-size: 11px;
-      font-family: 'Fragment Mono', 'Geist Mono', monospace;
-      color: var(--text-hi);
-      padding: 0;
-      display: none;
-    }
-
-    .row-select {
-      flex: 1;
-      background: var(--sel-bg);
-      border: 0.5px solid var(--sel-bdr);
-      border-radius: 7px;
-      color: var(--sel-col);
-      font-size: 11px;
-      padding: 4px 24px 4px 8px;
-      outline: none;
-      cursor: pointer;
-      appearance: none;
-      -webkit-appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M1 1l3 3 3-3' stroke='rgba(128,128,128,0.5)' stroke-width='1.2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 8px center;
-      font-family: inherit;
-    }
+    .row-val { flex: 1; text-align: right; font-size: 11px; color: var(--text-val); font-family: 'Fragment Mono','Geist Mono',monospace; cursor: default; }
+    .row-input { flex: 1; text-align: right; background: none; border: none; outline: none; font-size: 11px; font-family: 'Fragment Mono','Geist Mono',monospace; color: var(--text-hi); padding: 0; display: none; }
+    .row-select { flex: 1; background: var(--sel-bg); border: 0.5px solid var(--sel-bdr); border-radius: 7px; color: var(--sel-col); font-size: 11px; padding: 4px 24px 4px 8px; outline: none; cursor: pointer; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M1 1l3 3 3-3' stroke='rgba(128,128,128,0.5)' stroke-width='1.2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; font-family: inherit; }
     .row-select option { background: #1c1c1c; color: #e8e8e8; }
 
     .align-row { display: flex; gap: 4px; flex: 1; justify-content: flex-end; }
-    .align-btn {
-      width: 28px; height: 24px;
-      border: 0.5px solid var(--ab-bdr);
-      background: var(--ab-bg);
-      color: var(--ab-col);
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all 0.12s;
-      display: flex; align-items: center; justify-content: center;
-    }
+    .align-btn { width: 28px; height: 24px; border: 0.5px solid var(--ab-bdr); background: var(--ab-bg); color: var(--ab-col); border-radius: 6px; cursor: pointer; transition: all 0.12s; display: flex; align-items: center; justify-content: center; }
     .align-btn:hover { color: var(--text-hi); border-color: var(--chip-hover); }
     .align-btn.active { background: var(--ab-act-bg); border-color: var(--ab-act-bdr); color: var(--text-hi); }
 
-    .reset-row {
-      padding: 8px 10px;
-      border-top: 0.5px solid var(--border-sub);
-    }
-    .reset-btn {
-      width: 100%; padding: 6px;
-      background: rgba(255,60,60,0.07);
-      border: 0.5px solid rgba(255,60,60,0.15);
-      border-radius: 8px;
-      color: rgba(255,100,100,0.6);
-      font-size: 10px; font-weight: 500;
-      letter-spacing: 0.06em; text-transform: uppercase;
-      cursor: pointer; transition: all 0.12s;
-    }
+    .reset-row { padding: 8px 10px; border-top: 0.5px solid var(--border-sub); }
+    .reset-btn { width: 100%; padding: 6px; background: rgba(255,60,60,0.07); border: 0.5px solid rgba(255,60,60,0.15); border-radius: 8px; color: rgba(255,100,100,0.6); font-size: 11px; font-weight: 400; cursor: pointer; transition: all 0.12s; }
     .reset-btn:hover { background: rgba(255,60,60,0.13); color: rgba(255,120,120,0.9); }
 
-    .css-section {
-      border-top: 0.5px solid var(--border-sub);
-      padding: 10px 12px;
+    /* DialKit-style tick ruler + cursor */
+    .row[data-trackable] { position: relative; overflow: hidden; }
+    .row[data-trackable]::before {
+      content: ''; position: absolute; inset: 0; pointer-events: none;
+      background: linear-gradient(to right, var(--text-hi) 0px, var(--text-hi) 1px, transparent 1px);
+      background-size: 13px 9px;
+      background-position: 0 center;
+      background-repeat: repeat-x;
+      opacity: 0; transition: opacity 0.12s;
     }
-    .css-head {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 8px;
+    .row[data-trackable]:hover::before { opacity: 0.13; }
+    .row[data-trackable].scrubbing::before { opacity: 0.18; }
+    .row-cursor {
+      position: absolute;
+      top: 50%; transform: translateY(-50%);
+      height: 16px; width: 2px; border-radius: 1px;
+      background: var(--text-hi);
+      left: var(--pct, 0%); pointer-events: none;
+      opacity: 0; transition: opacity 0.12s;
     }
-    .css-head span {
-      font-size: 10px; font-weight: 500;
-      color: var(--text-lo);
-      text-transform: uppercase; letter-spacing: 0.08em;
-    }
-    .copy-btn {
-      font-size: 10px; font-weight: 500;
-      color: var(--text-lo);
-      background: none; border: 0.5px solid var(--ab-bdr);
-      border-radius: 6px; padding: 2px 8px;
-      cursor: pointer; transition: all 0.12s;
-    }
-    .copy-btn:hover { color: var(--text-hi); border-color: var(--chip-hover); }
-    .copy-btn.copied { color: #4ade80; border-color: rgba(74,222,128,0.35); }
+    .row[data-trackable]:hover .row-cursor { opacity: 0.75; }
+    .row[data-trackable].scrubbing .row-cursor { opacity: 1; }
 
-    .css-code {
-      font-family: 'Fragment Mono', 'Geist Mono', monospace;
-      font-size: 9.5px; line-height: 1.9;
-      color: var(--text-lo); white-space: pre;
-    }
-    .css-code .val { color: var(--text-val); }
-
-    /* half-circle theme icon */
     .theme-icon path { transition: fill 0.15s; }
+
+    /* ══ CHANGE BADGES ══ */
+    .text-wrap { position: relative; display: inline-block; }
+    .change-badge {
+      position: absolute; top: 0; left: 0;
+      transform: translate(-50%, -50%);
+      width: 20px; height: 20px; border-radius: 50%;
+      background: #22c55e; color: #fff;
+      font-size: 10px; font-weight: 700; letter-spacing: 0;
+      font-family: 'Inter', sans-serif;
+      display: flex; align-items: center; justify-content: center;
+      pointer-events: none; z-index: 10000;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.22);
+      opacity: 0; transition: opacity 0.15s;
+    }
+    .change-badge.visible { opacity: 1; }
   </style>
 </head>
 <body>
 
   <!-- PREVIEW -->
   <div class="preview">
-    <div class="text-el" data-id="display"    contenteditable spellcheck="false">Christopher Grady</div>
-    <div class="text-el" data-id="heading"    contenteditable spellcheck="false">Product Designer &amp; PM</div>
-    <div class="text-el" data-id="subheading" contenteditable spellcheck="false">Building at the intersection of systems thinking and visual craft</div>
-    <div class="text-el" data-id="body"       contenteditable spellcheck="false">I spend most of my time figuring out why things feel off — in products, in interfaces, in the gap between what a team ships and what a user actually experiences. That instinct is what led me to design, and what keeps me close to the PM side too.</div>
-    <div class="text-el" data-id="caption"    contenteditable spellcheck="false">Currently at Amazon · Tokyo</div>
-    <div class="text-el" data-id="mono"       contenteditable spellcheck="false">case-study-01.md</div>
+    <div class="text-wrap">
+      <div class="text-el" data-id="display" contenteditable spellcheck="false">Christopher Grady</div>
+      <div class="change-badge" data-for="display"></div>
+    </div>
+    <div class="text-wrap">
+      <div class="text-el" data-id="heading" contenteditable spellcheck="false">Product Designer &amp; PM</div>
+      <div class="change-badge" data-for="heading"></div>
+    </div>
+    <div class="text-wrap">
+      <div class="text-el" data-id="subheading" contenteditable spellcheck="false">Building at the intersection of systems thinking and visual craft</div>
+      <div class="change-badge" data-for="subheading"></div>
+    </div>
+    <div class="text-wrap">
+      <div class="text-el" data-id="body" contenteditable spellcheck="false">I spend most of my time figuring out why things feel off — in products, in interfaces, in the gap between what a team ships and what a user actually experiences. That instinct is what led me to design, and what keeps me close to the PM side too.</div>
+      <div class="change-badge" data-for="body"></div>
+    </div>
+    <div class="text-wrap">
+      <div class="text-el" data-id="caption" contenteditable spellcheck="false">Currently at Amazon · Tokyo</div>
+      <div class="change-badge" data-for="caption"></div>
+    </div>
+    <div class="text-wrap">
+      <div class="text-el" data-id="mono" contenteditable spellcheck="false">case-study-01.md</div>
+      <div class="change-badge" data-for="mono"></div>
+    </div>
   </div>
 
   <!-- PANEL -->
   <div id="panel">
+    <div class="panel-inner">
 
-    <!-- Crosshair shown only when minimized -->
-    <div class="dial-icon">
-      <svg width="12" height="13" viewBox="0 0 12 13" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M0 0.772727V3H4.54545V13H7.45455V3H12V0.772727H0Z" fill="currentColor"/>
-      </svg>
-    </div>
-
-    <!-- Header -->
-    <div class="ph" id="dragHandle">
-      <span class="ph-title">TypeSet</span>
-      <div class="ph-right">
-        <span class="badge" id="badge">—</span>
-        <!-- Panel light/dark toggle -->
-        <button class="icon-btn" id="themeBtn" title="Toggle panel theme">
-          <svg class="theme-icon" width="11" height="11" viewBox="0 0 11 11" fill="none">
-            <circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" stroke-width="1"/>
-            <path class="theme-half" d="M5.5 1 A4.5 4.5 0 0 0 5.5 10 Z" fill="currentColor"/>
-          </svg>
-        </button>
-        <!-- Minimize -->
-        <button class="icon-btn" id="minBtn" title="Minimize">
-          <svg width="10" height="2" viewBox="0 0 10 2" fill="none">
-            <rect width="10" height="1.5" rx="0.75" fill="currentColor"/>
-          </svg>
-        </button>
+      <div class="dial-icon">
+        <svg width="12" height="13" viewBox="0 0 12 13" fill="none">
+          <path d="M0 0.772727V3H4.54545V13H7.45455V3H12V0.772727H0Z" fill="currentColor"/>
+        </svg>
       </div>
-    </div>
 
-    <!-- Body -->
-    <div class="pb" id="panelBody">
-      <div class="no-sel" id="noSel">click any text to select</div>
-
-      <div id="controls" style="display:none">
-
-        <div class="section-head"><span>Typography</span></div>
-
-        <div class="row">
-          <div class="row-label" data-prop="fontSize" data-min="8" data-max="120" data-step="0.5">Size</div>
-          <span class="row-val" id="vSize">—</span>
-          <input class="row-input" id="iSize" type="number" min="8" max="120" step="0.5">
-        </div>
-
-        <div class="row">
-          <div class="row-label" data-prop="fontWeight" data-min="100" data-max="900" data-step="100">Weight</div>
-          <span class="row-val" id="vWeight">—</span>
-          <input class="row-input" id="iWeight" type="number" min="100" max="900" step="100">
-        </div>
-
-        <div class="row">
-          <div class="row-label" data-prop="lineHeight" data-min="0.8" data-max="3.0" data-step="0.05">Line H</div>
-          <span class="row-val" id="vLH">—</span>
-          <input class="row-input" id="iLH" type="number" min="0.8" max="3.0" step="0.05">
-        </div>
-
-        <div class="row">
-          <div class="row-label" data-prop="letterSpacing" data-min="-0.1" data-max="0.4" data-step="0.005">Spacing</div>
-          <span class="row-val" id="vLS">—</span>
-          <input class="row-input" id="iLS" type="number" min="-0.1" max="0.4" step="0.005">
-        </div>
-
-        <div class="section-head"><span>Position</span></div>
-
-        <div class="row">
-          <div class="row-label" data-prop="translateX" data-min="-400" data-max="400" data-step="1">X</div>
-          <span class="row-val" id="vX">0px</span>
-          <input class="row-input" id="iX" type="number" step="1">
-        </div>
-
-        <div class="row">
-          <div class="row-label" data-prop="translateY" data-min="-400" data-max="400" data-step="1">Y</div>
-          <span class="row-val" id="vY">0px</span>
-          <input class="row-input" id="iY" type="number" step="1">
-        </div>
-
-        <div class="section-head"><span>Family</span></div>
-
-        <div class="row">
-          <select class="row-select" id="fontSelect">
-            <optgroup label="Sans">
-              <option value="'Söhne', sans-serif">Söhne</option>
-              <option value="'Inter', sans-serif">Inter</option>
-              <option value="'Plus Jakarta Sans', sans-serif">Plus Jakarta Sans</option>
-              <option value="'Space Grotesk', sans-serif">Space Grotesk</option>
-              <option value="'DM Sans', sans-serif">DM Sans</option>
-              <option value="'Outfit', sans-serif">Outfit</option>
-              <option value="system-ui, sans-serif">System UI</option>
-            </optgroup>
-            <optgroup label="Serif">
-              <option value="'Newsreader', serif">Newsreader</option>
-              <option value="'DM Serif Display', serif">DM Serif Display</option>
-              <option value="'Playfair Display', serif">Playfair Display</option>
-              <option value="'Cormorant Garamond', serif">Cormorant Garamond</option>
-              <option value="'Lora', serif">Lora</option>
-              <option value="'Libre Baskerville', serif">Libre Baskerville</option>
-              <option value="Georgia, serif">Georgia</option>
-            </optgroup>
-            <optgroup label="Mono">
-              <option value="'Geist Mono', monospace">Geist Mono</option>
-              <option value="'Fragment Mono', monospace">Fragment Mono</option>
-              <option value="ui-monospace, monospace">System Mono</option>
-            </optgroup>
-          </select>
-        </div>
-
-        <div class="section-head"><span>Align</span></div>
-
-        <div class="row">
-          <div class="align-row">
-            <button class="align-btn" data-align="left">←</button>
-            <button class="align-btn" data-align="center">↔</button>
-            <button class="align-btn" data-align="right">→</button>
+      <!-- Header -->
+      <div class="ph" id="dragHandle">
+        <span class="ph-title">TypeSet</span>
+        <div class="ph-right">
+          <div class="version-wrap" id="versionWrap">
+            <button class="version-btn" id="versionBtn">
+              <span id="versionLabel">Version 1</span>
+              <svg width="6" height="4" viewBox="0 0 6 4" fill="none">
+                <path d="M0.5 0.5L3 3L5.5 0.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <div class="version-menu" id="versionMenu"></div>
           </div>
+          <button class="copy-btn" id="copyBtn" title="Copy CSS">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <rect x="4" y="4" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.1"/>
+              <path d="M3 8H2a1 1 0 01-1-1V2a1 1 0 011-1h5a1 1 0 011 1v1" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+            </svg>
+          </button>
+          <button class="icon-btn" id="themeBtn" title="Toggle panel theme">
+            <svg class="theme-icon" width="11" height="11" viewBox="0 0 11 11" fill="none">
+              <circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" stroke-width="1"/>
+              <path class="theme-half" d="M5.5 1 A4.5 4.5 0 0 0 5.5 10 Z" fill="currentColor"/>
+            </svg>
+          </button>
+          <button class="icon-btn" id="minBtn" title="Minimize">
+            <svg width="10" height="2" viewBox="0 0 10 2" fill="none">
+              <rect width="10" height="1.5" rx="0.75" fill="currentColor"/>
+            </svg>
+          </button>
         </div>
+      </div>
 
-        <div class="reset-row">
-          <button class="reset-btn" id="resetBtn">Reset to default</button>
-        </div>
+      <!-- Body -->
+      <div class="pb" id="panelBody">
 
-        <div class="css-section">
-          <div class="css-head">
-            <span>CSS</span>
-            <button class="copy-btn" id="copyBtn">Copy</button>
+        <div class="select-hint visible" id="selectHint">Select text to edit</div>
+
+        <div id="controls" class="disabled">
+
+          <div class="section-head"><span>Typography</span></div>
+
+          <div class="row" data-trackable>
+            <div class="row-cursor"></div>
+            <div class="row-label" data-prop="fontSize" data-min="8" data-max="120" data-step="0.5">Size</div>
+            <span class="row-val" id="vSize">—</span>
+            <input class="row-input" id="iSize" type="number" min="8" max="120" step="0.5">
           </div>
-          <div class="css-code" id="cssOut"></div>
-        </div>
+          <div class="row" data-trackable>
+            <div class="row-cursor"></div>
+            <div class="row-label" data-prop="fontWeight" data-min="100" data-max="900" data-step="100">Weight</div>
+            <span class="row-val" id="vWeight">—</span>
+            <input class="row-input" id="iWeight" type="number" min="100" max="900" step="100">
+          </div>
+          <div class="row" data-trackable>
+            <div class="row-cursor"></div>
+            <div class="row-label" data-prop="lineHeight" data-min="0.8" data-max="3.0" data-step="0.05">Line Height</div>
+            <span class="row-val" id="vLH">—</span>
+            <input class="row-input" id="iLH" type="number" min="0.8" max="3.0" step="0.05">
+          </div>
+          <div class="row" data-trackable>
+            <div class="row-cursor"></div>
+            <div class="row-label" data-prop="letterSpacing" data-min="-0.1" data-max="0.4" data-step="0.005">Spacing</div>
+            <span class="row-val" id="vLS">—</span>
+            <input class="row-input" id="iLS" type="number" min="-0.1" max="0.4" step="0.005">
+          </div>
 
+          <div class="section-head"><span>Position</span></div>
+
+          <div class="row" data-trackable>
+            <div class="row-cursor"></div>
+            <div class="row-label" data-prop="translateX" data-min="-400" data-max="400" data-step="1">X</div>
+            <span class="row-val" id="vX">0px</span>
+            <input class="row-input" id="iX" type="number" step="1">
+          </div>
+          <div class="row" data-trackable>
+            <div class="row-cursor"></div>
+            <div class="row-label" data-prop="translateY" data-min="-400" data-max="400" data-step="1">Y</div>
+            <span class="row-val" id="vY">0px</span>
+            <input class="row-input" id="iY" type="number" step="1">
+          </div>
+
+          <div class="section-head"><span>Family</span></div>
+          <div class="row">
+            <select class="row-select" id="fontSelect">
+              <optgroup label="Sans">
+                <option value="'Söhne', sans-serif">Söhne</option>
+                <option value="'Inter', sans-serif">Inter</option>
+                <option value="'Plus Jakarta Sans', sans-serif">Plus Jakarta Sans</option>
+                <option value="'Space Grotesk', sans-serif">Space Grotesk</option>
+                <option value="'DM Sans', sans-serif">DM Sans</option>
+                <option value="'Outfit', sans-serif">Outfit</option>
+                <option value="system-ui, sans-serif">System UI</option>
+              </optgroup>
+              <optgroup label="Serif">
+                <option value="'Newsreader', serif">Newsreader</option>
+                <option value="'DM Serif Display', serif">DM Serif Display</option>
+                <option value="'Playfair Display', serif">Playfair Display</option>
+                <option value="'Cormorant Garamond', serif">Cormorant Garamond</option>
+                <option value="'Lora', serif">Lora</option>
+                <option value="'Libre Baskerville', serif">Libre Baskerville</option>
+                <option value="Georgia, serif">Georgia</option>
+              </optgroup>
+              <optgroup label="Mono">
+                <option value="'Geist Mono', monospace">Geist Mono</option>
+                <option value="'Fragment Mono', monospace">Fragment Mono</option>
+                <option value="ui-monospace, monospace">System Mono</option>
+              </optgroup>
+            </select>
+          </div>
+
+          <div class="section-head"><span>Align</span></div>
+          <div class="row">
+            <div class="align-row">
+              <button class="align-btn" data-align="left">←</button>
+              <button class="align-btn" data-align="center">↔</button>
+              <button class="align-btn" data-align="right">→</button>
+            </div>
+          </div>
+
+          <div class="reset-row">
+            <button class="reset-btn" id="resetBtn">Reset</button>
+          </div>
+
+        </div>
       </div>
     </div>
   </div>
@@ -538,57 +468,153 @@
       };
     });
 
-    let active = null, txX = 0, txY = 0;
     const $ = id => document.getElementById(id);
     const panel = $('panel'), dragHandle = $('dragHandle');
     const minBtn = $('minBtn'), themeBtn = $('themeBtn');
-    const badge = $('badge'), noSel = $('noSel'), controls = $('controls');
+    const selectHint = $('selectHint'), controls = $('controls');
     const fontSelect = $('fontSelect'), copyBtn = $('copyBtn'), resetBtn = $('resetBtn');
-    const cssOut = $('cssOut');
+
+    let active = null, txX = 0, txY = 0;
 
     // ════════════════════════════════
-    // PANEL DRAG
+    // UNDO STACK
+    // ════════════════════════════════
+    const undoStack = [];
+
+    function snapshotActive() {
+      if (!active) return null;
+      return {
+        id: active.dataset.id,
+        fontSize:      active.style.fontSize,
+        fontWeight:    active.style.fontWeight,
+        lineHeight:    active.style.lineHeight,
+        letterSpacing: active.style.letterSpacing,
+        fontFamily:    active.style.fontFamily,
+        textAlign:     active.style.textAlign,
+        transform:     active.style.transform,
+        txX, txY,
+      };
+    }
+
+    function pushUndo() {
+      const snap = snapshotActive();
+      if (snap) undoStack.push(snap);
+    }
+
+    function popUndo() {
+      const snap = undoStack.pop();
+      if (!snap) return;
+      const el = document.querySelector(`.text-el[data-id="${snap.id}"]`);
+      if (!el) return;
+      el.style.fontSize      = snap.fontSize;
+      el.style.fontWeight    = snap.fontWeight;
+      el.style.lineHeight    = snap.lineHeight;
+      el.style.letterSpacing = snap.letterSpacing;
+      el.style.fontFamily    = snap.fontFamily;
+      el.style.textAlign     = snap.textAlign;
+      el.style.transform     = snap.transform;
+      txX = snap.txX; txY = snap.txY;
+      if (active && active.dataset.id === snap.id) syncFrom(el);
+      saveCurrentVersion();
+    }
+
+    // ════════════════════════════════
+    // CHANGE BADGES
+    // ════════════════════════════════
+    const badgePositions = {};
+    const PENCIL = `<svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M6.5 0.5L8.5 2.5L2.5 8.5H0.5V6.5L6.5 0.5Z" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.5 1.5L7.5 3.5" stroke="white" stroke-width="1.2" stroke-linecap="round"/></svg>`;
+
+    function updateBadges() {
+      let idx = 0;
+      document.querySelectorAll('.text-el').forEach(el => {
+        const s = el.style;
+        const changed = !!(
+          s.fontFamily || s.fontSize || s.fontWeight ||
+          s.lineHeight || s.letterSpacing || s.textAlign ||
+          (s.transform && s.transform !== 'none')
+        );
+        const badge = document.querySelector(`.change-badge[data-for="${el.dataset.id}"]`);
+        if (!badge) return;
+        if (changed) {
+          idx++;
+          const pos = badgePositions[el.dataset.id];
+          if (pos) {
+            badge.style.left = pos.x + 'px';
+            badge.style.top  = pos.y + 'px';
+          }
+          badge.dataset.num = idx;
+          if (!badge.classList.contains('hovered')) badge.innerHTML = idx;
+          badge.classList.add('visible');
+        } else {
+          badge.classList.remove('visible');
+          badge.removeAttribute('data-num');
+          badge.innerHTML = '';
+        }
+      });
+    }
+
+    // ════════════════════════════════
+    // PANEL DRAG (works minimized too)
     // ════════════════════════════════
     let pDrag = false, pOx = 0, pOy = 0, pX = 0, pY = 0, pInit = false;
+    let dragStartX = 0, dragStartY = 0, dragMoved = false;
 
     function initPanelPos() {
       if (pInit) return;
       const r = panel.getBoundingClientRect();
       pX = r.left; pY = r.top;
-      panel.style.right = 'auto'; panel.style.top = pY + 'px'; panel.style.left = pX + 'px';
+      panel.style.right = 'auto';
+      panel.style.left = pX + 'px';
+      panel.style.top  = pY + 'px';
       pInit = true;
     }
 
-    dragHandle.addEventListener('pointerdown', e => {
-      if (e.target.closest('.icon-btn')) return;
-      if (panel.classList.contains('minimized')) return;
+    function beginDrag(e, captureEl) {
       initPanelPos();
       pDrag = true;
+      dragStartX = e.clientX; dragStartY = e.clientY; dragMoved = false;
       pOx = e.clientX - pX; pOy = e.clientY - pY;
-      dragHandle.setPointerCapture(e.pointerId);
+      captureEl.setPointerCapture(e.pointerId);
       e.preventDefault();
+    }
+
+    dragHandle.addEventListener('pointerdown', e => {
+      if (e.target.closest('.icon-btn') || e.target.closest('.copy-btn') || e.target.closest('.version-wrap')) return;
+      if (panel.classList.contains('minimized')) return;
+      beginDrag(e, dragHandle);
     });
 
     document.addEventListener('pointermove', e => {
       if (!pDrag) return;
+      if (Math.abs(e.clientX - dragStartX) > 3 || Math.abs(e.clientY - dragStartY) > 3) dragMoved = true;
       pX = Math.max(0, Math.min(window.innerWidth  - panel.offsetWidth,  e.clientX - pOx));
       pY = Math.max(0, Math.min(window.innerHeight - panel.offsetHeight, e.clientY - pOy));
-      panel.style.left = pX + 'px'; panel.style.top = pY + 'px';
+      panel.style.left = pX + 'px';
+      panel.style.top  = pY + 'px';
     });
 
     document.addEventListener('pointerup', () => { pDrag = false; });
 
     // ════════════════════════════════
-    // MINIMIZE / EXPAND (morph)
+    // MINIMIZE / EXPAND
     // ════════════════════════════════
     minBtn.addEventListener('click', e => {
       e.stopPropagation();
-      initPanelPos();
+      // Clear JS-set positioning so CSS homes the icon to top-right
+      panel.style.left = '';
+      panel.style.top  = '';
+      panel.style.right = '';
+      pInit = false;
       panel.classList.add('minimized');
     });
 
     panel.addEventListener('click', e => {
       if (!panel.classList.contains('minimized')) return;
+      // Clear JS overrides so CSS homes the panel to its default expanded position
+      panel.style.left = '';
+      panel.style.top  = '';
+      panel.style.right = '';
+      pInit = false;
       panel.classList.remove('minimized');
     });
 
@@ -601,17 +627,131 @@
     });
 
     // ════════════════════════════════
+    // VERSIONS
+    // ════════════════════════════════
+    function captureAllStyles() {
+      const snap = {};
+      document.querySelectorAll('.text-el').forEach(el => {
+        snap[el.dataset.id] = {
+          innerHTML:     el.innerHTML,
+          fontSize:      el.style.fontSize,
+          fontWeight:    el.style.fontWeight,
+          lineHeight:    el.style.lineHeight,
+          letterSpacing: el.style.letterSpacing,
+          fontFamily:    el.style.fontFamily,
+          textAlign:     el.style.textAlign,
+          transform:     el.style.transform,
+        };
+      });
+      return snap;
+    }
+
+    function applyAllStyles(snap) {
+      document.querySelectorAll('.text-el').forEach(el => {
+        const s = snap[el.dataset.id];
+        if (!s) return;
+        if (s.innerHTML !== undefined) el.innerHTML = s.innerHTML;
+        el.style.fontSize      = s.fontSize      || '';
+        el.style.fontWeight    = s.fontWeight     || '';
+        el.style.lineHeight    = s.lineHeight     || '';
+        el.style.letterSpacing = s.letterSpacing  || '';
+        el.style.fontFamily    = s.fontFamily     || '';
+        el.style.textAlign     = s.textAlign      || '';
+        el.style.transform     = s.transform      || '';
+      });
+    }
+
+    let versions = [{ name: 'Version 1', styles: captureAllStyles() }];
+    let currentVersionIdx = 0;
+
+    function saveCurrentVersion() {
+      versions[currentVersionIdx].styles = captureAllStyles();
+      updateBadges();
+    }
+
+    function switchVersion(idx) {
+      saveCurrentVersion();
+      currentVersionIdx = idx;
+      applyAllStyles(versions[idx].styles);
+      updateBadges();
+      txX = 0; txY = 0;
+      if (active) {
+        const mat = new DOMMatrix(getComputedStyle(active).transform);
+        txX = Math.round(mat.m41); txY = Math.round(mat.m42);
+        syncFrom(active);
+      }
+      renderVersionMenu();
+    }
+
+    function addVersion() {
+      saveCurrentVersion();
+      const n = versions.length + 1;
+      versions.push({ name: `Version ${n}`, styles: captureAllStyles() });
+      currentVersionIdx = versions.length - 1;
+      renderVersionMenu();
+    }
+
+    function renderVersionMenu() {
+      const menu = $('versionMenu');
+      $('versionLabel').textContent = versions[currentVersionIdx].name;
+      menu.innerHTML = versions.map((v, i) => `
+        <div class="version-item ${i === currentVersionIdx ? 'current' : ''}" data-idx="${i}">
+          <span>${v.name}</span><span class="ver-check">✓</span>
+        </div>
+      `).join('') + `<div class="version-sep"></div><div class="version-add-row" id="vAddRow">+ Add version</div>`;
+
+      menu.querySelectorAll('.version-item').forEach(item => {
+        item.addEventListener('click', () => { switchVersion(parseInt(item.dataset.idx)); closeVersionMenu(); });
+      });
+      $('vAddRow').addEventListener('click', () => { addVersion(); closeVersionMenu(); });
+    }
+
+    const versionBtn  = $('versionBtn');
+    const versionMenu = $('versionMenu');
+    versionBtn.addEventListener('click', e => { e.stopPropagation(); versionMenu.classList.toggle('open'); });
+    function closeVersionMenu() { versionMenu.classList.remove('open'); }
+    document.addEventListener('click', e => { if (!e.target.closest('#versionWrap')) closeVersionMenu(); });
+    renderVersionMenu();
+
+    // ════════════════════════════════
     // SELECT TEXT ELEMENT
     // ════════════════════════════════
     document.querySelectorAll('.text-el').forEach(el => {
-      el.addEventListener('mousedown', () => {
+      el.addEventListener('mousedown', e => {
         if (active) active.classList.remove('active');
         active = el;
         el.classList.add('active');
         syncFrom(el);
-        noSel.style.display = 'none';
-        controls.style.display = 'block';
-        badge.textContent = el.dataset.id;
+        selectHint.classList.remove('visible');
+        controls.classList.remove('disabled');
+
+        // Pin badge to click location inside .text-wrap
+        const wrap = el.closest('.text-wrap');
+        if (wrap) {
+          const rect = wrap.getBoundingClientRect();
+          badgePositions[el.dataset.id] = {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top,
+          };
+        }
+
+        saveCurrentVersion();
+      });
+
+      el.addEventListener('mouseenter', () => {
+        const badge = document.querySelector(`.change-badge[data-for="${el.dataset.id}"]`);
+        if (badge && badge.classList.contains('visible')) {
+          badge.innerHTML = PENCIL;
+          badge.classList.add('hovered');
+        }
+      });
+
+      el.addEventListener('mouseleave', () => {
+        const badge = document.querySelector(`.change-badge[data-for="${el.dataset.id}"]`);
+        if (badge && badge.classList.contains('hovered')) {
+          badge.innerHTML = badge.dataset.num || '';
+          badge.classList.remove('hovered');
+        }
       });
     });
 
@@ -619,9 +759,8 @@
       if (!e.target.closest('.text-el')) {
         if (active) active.classList.remove('active');
         active = null;
-        noSel.style.display = '';
-        controls.style.display = 'none';
-        badge.textContent = '—';
+        selectHint.classList.add('visible');
+        controls.classList.add('disabled');
       }
     });
 
@@ -633,10 +772,12 @@
     document.querySelectorAll('.row-label').forEach(label => {
       label.addEventListener('pointerdown', e => {
         if (!active) return;
+        pushUndo();
         scrubEl = label;
         scrubStart = e.clientX;
         scrubVal = getCurrentValue(label.dataset.prop);
         label.classList.add('scrubbing');
+        label.closest('.row').classList.add('scrubbing');
         label.setPointerCapture(e.pointerId);
         e.preventDefault();
       });
@@ -655,31 +796,35 @@
     });
 
     document.addEventListener('pointerup', () => {
-      if (scrubEl) { scrubEl.classList.remove('scrubbing'); scrubEl = null; }
+      if (scrubEl) {
+        scrubEl.classList.remove('scrubbing');
+        scrubEl.closest('.row').classList.remove('scrubbing');
+        scrubEl = null;
+      }
     });
 
     document.querySelectorAll('.row-val').forEach(valEl => {
       valEl.addEventListener('dblclick', () => {
         if (!active) return;
-        const row = valEl.closest('.row');
+        const row   = valEl.closest('.row');
         const label = row.querySelector('.row-label');
-        const inputEl = row.querySelector('.row-input');
-        if (!label || !inputEl) return;
-        inputEl.value = getCurrentValue(label.dataset.prop);
+        const input = row.querySelector('.row-input');
+        if (!label || !input) return;
+        input.value = getCurrentValue(label.dataset.prop);
         valEl.style.display = 'none';
-        inputEl.style.display = 'block';
-        inputEl.focus(); inputEl.select();
+        input.style.display = 'block';
+        input.focus(); input.select();
       });
     });
 
     document.querySelectorAll('.row-input').forEach(input => {
       const commit = () => {
-        const row = input.closest('.row');
+        const row   = input.closest('.row');
         const label = row.querySelector('.row-label');
         const valEl = row.querySelector('.row-val');
         if (!label || !active) return;
         const val = parseFloat(input.value);
-        if (!isNaN(val)) { applyProp(label.dataset.prop, val); syncDisplay(label.dataset.prop, val); }
+        if (!isNaN(val)) { pushUndo(); applyProp(label.dataset.prop, val); syncDisplay(label.dataset.prop, val); }
         input.style.display = 'none';
         valEl.style.display = '';
       };
@@ -693,14 +838,23 @@
     // ════════════════════════════════
     // SYNC / APPLY
     // ════════════════════════════════
+    function updateRowTrack(prop, val) {
+      const label = document.querySelector(`.row-label[data-prop="${prop}"]`);
+      if (!label) return;
+      const min = parseFloat(label.dataset.min);
+      const max = parseFloat(label.dataset.max);
+      const pct = Math.max(0, Math.min(100, ((val - min) / (max - min)) * 100));
+      label.closest('.row').style.setProperty('--pct', pct.toFixed(1) + '%');
+    }
+
     function syncFrom(el) {
-      const cs  = getComputedStyle(el);
-      const fsz = parseFloat(cs.fontSize);
+      const cs   = getComputedStyle(el);
+      const fsz  = parseFloat(cs.fontSize);
       const lhPx = parseFloat(cs.lineHeight);
-      const lh  = isNaN(lhPx / fsz) ? 1.4 : Math.round((lhPx / fsz) * 100) / 100;
+      const lh   = isNaN(lhPx / fsz) ? 1.4 : Math.round((lhPx / fsz) * 100) / 100;
       const lsPx = cs.letterSpacing === 'normal' ? 0 : parseFloat(cs.letterSpacing);
-      const ls  = Math.round((lsPx / fsz) * 1000) / 1000;
-      const mat = new DOMMatrix(cs.transform);
+      const ls   = Math.round((lsPx / fsz) * 1000) / 1000;
+      const mat  = new DOMMatrix(cs.transform);
       txX = Math.round(mat.m41); txY = Math.round(mat.m42);
 
       $('vSize').textContent   = Math.round(fsz) + 'px';
@@ -710,6 +864,13 @@
       $('vX').textContent      = txX + 'px';
       $('vY').textContent      = txY + 'px';
 
+      updateRowTrack('fontSize',      fsz);
+      updateRowTrack('fontWeight',    parseInt(cs.fontWeight) || 400);
+      updateRowTrack('lineHeight',    lh);
+      updateRowTrack('letterSpacing', ls);
+      updateRowTrack('translateX',    txX);
+      updateRowTrack('translateY',    txY);
+
       const fam = cs.fontFamily;
       for (const opt of fontSelect.options) {
         const key = opt.value.replace(/'/g,'').split(',')[0].trim();
@@ -717,7 +878,6 @@
       }
       document.querySelectorAll('.align-btn').forEach(b =>
         b.classList.toggle('active', b.dataset.align === cs.textAlign));
-      updateCSS();
     }
 
     function getCurrentValue(prop) {
@@ -741,7 +901,8 @@
       if (prop === 'letterSpacing') active.style.letterSpacing = val + 'em';
       if (prop === 'translateX')   { txX = val; active.style.transform = `translate(${txX}px,${txY}px)`; }
       if (prop === 'translateY')   { txY = val; active.style.transform = `translate(${txX}px,${txY}px)`; }
-      updateCSS();
+      updateRowTrack(prop, val);
+      saveCurrentVersion();
     }
 
     function syncDisplay(prop, val) {
@@ -751,64 +912,101 @@
       if (prop === 'letterSpacing') $('vLS').textContent     = val.toFixed(3) + 'em';
       if (prop === 'translateX')    $('vX').textContent      = Math.round(val) + 'px';
       if (prop === 'translateY')    $('vY').textContent      = Math.round(val) + 'px';
+      updateRowTrack(prop, val);
     }
 
     fontSelect.addEventListener('change', () => {
       if (!active) return;
+      pushUndo();
       active.style.fontFamily = fontSelect.value;
-      updateCSS();
+      saveCurrentVersion();
     });
 
     document.querySelectorAll('.align-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.align-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        if (active) { active.style.textAlign = btn.dataset.align; updateCSS(); }
+        if (active) { pushUndo(); active.style.textAlign = btn.dataset.align; saveCurrentVersion(); }
       });
     });
 
     resetBtn.addEventListener('click', () => {
       if (!active) return;
-      const d = defaults[active.dataset.id];
-      if (!d) return;
-      Object.assign(active.style, {
-        fontSize: d.fontSize, fontWeight: d.fontWeight,
-        lineHeight: d.lineHeight, letterSpacing: d.letterSpacing,
-        fontFamily: d.fontFamily, textAlign: d.textAlign, transform: d.transform,
-      });
+      pushUndo();
+      active.style.fontSize = '';
+      active.style.fontWeight = '';
+      active.style.lineHeight = '';
+      active.style.letterSpacing = '';
+      active.style.fontFamily = '';
+      active.style.textAlign = '';
+      active.style.transform = '';
       txX = 0; txY = 0;
       syncFrom(active);
+      saveCurrentVersion();
     });
 
-    function updateCSS() {
-      if (!active) return;
-      const s = active.style;
-      const pairs = [
-        ['font-family', s.fontFamily], ['font-size', s.fontSize],
-        ['font-weight', s.fontWeight], ['line-height', s.lineHeight],
-        ['letter-spacing', s.letterSpacing], ['text-align', s.textAlign],
-        ['transform', s.transform && s.transform !== 'none' ? s.transform : ''],
-      ].filter(([, v]) => v);
-      cssOut.innerHTML = pairs.map(([p, v]) => `${p}: <span class="val">${v}</span>;`).join('\n');
+    function triggerCopyCSS() {
+      const sections = [];
+      let idx = 0;
+
+      document.querySelectorAll('.text-el').forEach(el => {
+        const s = el.style;
+        const lines = [
+          s.fontFamily                        && `font-family: ${s.fontFamily};`,
+          s.fontSize                          && `font-size: ${s.fontSize};`,
+          s.fontWeight                        && `font-weight: ${s.fontWeight};`,
+          s.lineHeight                        && `line-height: ${s.lineHeight};`,
+          s.letterSpacing                     && `letter-spacing: ${s.letterSpacing};`,
+          s.textAlign                         && `text-align: ${s.textAlign};`,
+          s.transform && s.transform !== 'none' && `transform: ${s.transform};`,
+        ].filter(Boolean);
+
+        if (!lines.length) return;
+
+        idx++;
+        const id = el.dataset.id;
+        const label = id.charAt(0).toUpperCase() + id.slice(1);
+        const text = el.textContent.trim();
+        const excerpt = text.length > 55 ? text.slice(0, 55) + '…' : text;
+        sections.push(`### ${idx}. ${label} — "${excerpt}"\n${lines.join('\n')}`);
+      });
+
+      if (!sections.length) return;
+
+      const versionName = versions[currentVersionIdx]?.name || 'Version 1';
+      const output = `## TypeSet — ${versionName}\n\n` + sections.join('\n\n');
+
+      navigator.clipboard.writeText(output).then(() => {
+        copyBtn.classList.add('copied');
+        setTimeout(() => copyBtn.classList.remove('copied'), 1500);
+      });
     }
 
-    copyBtn.addEventListener('click', () => {
-      if (!active) return;
-      const s = active.style;
-      const lines = [
-        s.fontFamily    && `font-family: ${s.fontFamily};`,
-        s.fontSize      && `font-size: ${s.fontSize};`,
-        s.fontWeight    && `font-weight: ${s.fontWeight};`,
-        s.lineHeight    && `line-height: ${s.lineHeight};`,
-        s.letterSpacing && `letter-spacing: ${s.letterSpacing};`,
-        s.textAlign     && `text-align: ${s.textAlign};`,
-        s.transform && s.transform !== 'none' && `transform: ${s.transform};`,
-      ].filter(Boolean);
-      navigator.clipboard.writeText(lines.join('\n')).then(() => {
-        copyBtn.textContent = 'Copied!'; copyBtn.classList.add('copied');
-        setTimeout(() => { copyBtn.textContent = 'Copy'; copyBtn.classList.remove('copied'); }, 1500);
-      });
+    copyBtn.addEventListener('click', triggerCopyCSS);
+
+    // ════════════════════════════════
+    // KEYBOARD SHORTCUTS
+    // ════════════════════════════════
+    document.addEventListener('keydown', e => {
+      if (!e.metaKey && !e.ctrlKey) return;
+
+      if (e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        popUndo();
+        return;
+      }
+
+      if (e.key === 'c') {
+        // Only intercept if no text is highlighted — let native copy work otherwise
+        if (window.getSelection().toString().length > 0) return;
+        if (!active) return;
+        e.preventDefault();
+        triggerCopyCSS();
+      }
     });
+
+    updateBadges();
+    panel.classList.add('minimized');
   </script>
 </body>
 </html>
