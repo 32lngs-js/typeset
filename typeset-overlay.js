@@ -51,7 +51,7 @@
       position:fixed; width:260px; background:var(--bg); border-radius:14px;
       box-shadow:0 0 0 0.5px var(--ring),0 16px 48px var(--shadow),0 4px 12px rgba(0,0,0,0.35);
       overflow:hidden; z-index:2147483647; user-select:none; right:20px; top:20px;
-      font-family:'Inter',system-ui,sans-serif;
+      font-family:system-ui,-apple-system,'SF Pro Display',sans-serif;   /* like DialKit */
       transition:width .34s cubic-bezier(.32,.72,0,1),height .34s cubic-bezier(.32,.72,0,1),
         left .34s cubic-bezier(.32,.72,0,1),top .34s cubic-bezier(.32,.72,0,1),
         border-radius .3s cubic-bezier(.32,.72,0,1),background .2s ease,box-shadow .28s ease;
@@ -107,7 +107,7 @@
     /* change badges — floating over each edited element. blue = single edit,
        green = group edit (agentation marker convention). Click to re-select. */
     .ts-badge { position:fixed; transform:translate(-50%,-50%); min-width:20px; height:20px; padding:0 6px; border-radius:999px;
-      color:#fff; font:700 10px/1 'Inter',sans-serif; display:flex; align-items:center; justify-content:center;
+      color:#fff; font:700 10px/1 system-ui,-apple-system,sans-serif; display:flex; align-items:center; justify-content:center;
       pointer-events:auto; cursor:pointer; z-index:2147483646; box-shadow:0 1px 6px rgba(0,0,0,0.28); }
     .ts-badge.single { background:#3c82f7; }
     .ts-badge.group  { background:#22c55e; }
@@ -177,7 +177,7 @@
     .ts-selbox.group { border-color:rgba(34,197,94,0.6); background:rgba(34,197,94,0.06); }
     /* dark pill descriptor label (agentation hover tooltip) */
     .ts-label { position:fixed; display:none; z-index:2147483647; pointer-events:none;
-      font:500 11px/1.3 'Inter',system-ui,sans-serif; color:#fff; background:rgba(0,0,0,0.85);
+      font:500 11px/1.3 system-ui,-apple-system,sans-serif; color:#fff; background:rgba(0,0,0,0.85);
       padding:4px 8px; border-radius:6px; max-width:340px; white-space:nowrap; overflow:hidden;
       text-overflow:ellipsis; box-shadow:0 2px 10px rgba(0,0,0,0.35); }
   `;
