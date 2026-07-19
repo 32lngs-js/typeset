@@ -4,34 +4,13 @@ MCP server that bridges the [TypeSet](https://github.com/32lngs-js/typeset) brow
 
 ## Setup
 
-Two commands, both one-time:
-
-**1. Start the background server** (run once per project, survives reboots):
+One command, run once ever:
 
 ```sh
-cd your-project
-npx typeset-server install
+npx typeset-mcp install
 ```
 
-This installs a launchd daemon that listens for browser POSTs on port 8800 and persists changes to `.typeset-pending.json`. Starts now and on every login.
-
-**2. Add the MCP tools** to `.claude/settings.json`:
-
-```json
-{
-  "mcpServers": {
-    "typeset": {
-      "command": "npx",
-      "args": ["-y", "typeset-mcp"],
-      "env": {
-        "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
-      }
-    }
-  }
-}
-```
-
-That's it. The `typeset-mcp` tools will appear in every agent session.
+This starts a background daemon (port 8800, survives reboots) and automatically adds `typeset-mcp` to `~/.claude/settings.json`. Open a new Claude Code session and the tools are ready — no per-project setup.
 
 ## How it works
 
@@ -46,11 +25,25 @@ Browser overlay  →  POST :8800  →  typeset-server (daemon)  →  .typeset-pe
 
 ## Workflow
 
-1. Inject TypeSet onto any page and edit typography with sliders
-2. Click Copy — the overlay POSTs changes to `localhost:8800/commit`
-3. The agent is notified via `notifications/resources/updated`
-4. The agent calls `get_pending_changes`, locates the CSS rule, and applies the edit
-5. The agent calls `apply_typeset_change` to mark it done
+**Step 1 — Add TypeSet to your dev HTML** (remove before shipping):
+
+```html
+<script src="https://32lngs-js.github.io/typeset/typeset-overlay.js"></script>
+```
+
+The panel appears automatically whenever your dev server is running. No bookmarklet, no extension.
+
+**Step 2 — Edit and commit:**
+
+1. Click any text element on your page
+2. Scrub sliders to adjust typography
+3. Click **Copy** — changes POST to `localhost:8800` and queue for the agent
+
+**Step 3 — Agent applies the change:**
+
+1. Agent is notified via `notifications/resources/updated`
+2. Agent calls `get_pending_changes`, locates the CSS rule in your project
+3. Agent edits the file and calls `apply_typeset_change` to mark it done
 
 ## MCP Tools
 
@@ -74,8 +67,8 @@ If MCP tools aren't available, the daemon's HTTP API covers the full workflow:
 ## Server management
 
 ```sh
-npx typeset-server install    # Install launchd daemon, start now
-npx typeset-server uninstall  # Stop and remove daemon
+npx typeset-mcp install    # Install launchd daemon, start now
+npx typeset-mcp uninstall  # Stop and remove daemon
 ```
 
 Logs: `/tmp/typeset-server.log`
