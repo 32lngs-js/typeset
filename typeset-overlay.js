@@ -1077,8 +1077,11 @@
       ].filter(Boolean);
       if (lines.length) blocks.push(`${sel} {\n  ${lines.join('\n  ')}\n}`);
       PROP_MAP.forEach(([js, css]) => {
-        // Only queue properties the user actually changed (inline value differs from computed).
-        if (s[js] && s[js] !== cs[js]) mcpChanges.push({ selector: sel, property: css, value: s[js], previousValue: cs[js] || null, project: TS_PROJECT });
+        // Queue every property the user set inline (that is exactly what they scrubbed).
+        // NOTE: do NOT filter on s[js] !== cs[js] — cs is computed AFTER the inline edit,
+        // so it always equals s[js] and would drop every change. Real no-op detection needs
+        // an original-value snapshot taken at selection time (tracked follow-up).
+        if (s[js]) mcpChanges.push({ selector: sel, property: css, value: s[js], previousValue: cs[js] || null, project: TS_PROJECT });
       });
       // Position drags (transform) are intentionally NOT queued as typography changes;
       // they still appear in the copied CSS block above.
