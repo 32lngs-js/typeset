@@ -25,11 +25,25 @@ Browser overlay  →  POST :8800  →  typeset-server (daemon)  →  .typeset-pe
 
 ## Workflow
 
-1. Inject TypeSet onto any page and edit typography with sliders
-2. Click Copy — the overlay POSTs changes to `localhost:8800/commit`
-3. The agent is notified via `notifications/resources/updated`
-4. The agent calls `get_pending_changes`, locates the CSS rule, and applies the edit
-5. The agent calls `apply_typeset_change` to mark it done
+**Step 1 — Add TypeSet to your dev HTML** (remove before shipping):
+
+```html
+<script src="https://32lngs-js.github.io/typeset/typeset-overlay.js"></script>
+```
+
+The panel appears automatically whenever your dev server is running. No bookmarklet, no extension.
+
+**Step 2 — Edit and commit:**
+
+1. Click any text element on your page
+2. Scrub sliders to adjust typography
+3. Click **Copy** — changes POST to `localhost:8800` and queue for the agent
+
+**Step 3 — Agent applies the change:**
+
+1. Agent is notified via `notifications/resources/updated`
+2. Agent calls `get_pending_changes`, locates the CSS rule in your project
+3. Agent edits the file and calls `apply_typeset_change` to mark it done
 
 ## MCP Tools
 

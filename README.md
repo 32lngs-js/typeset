@@ -22,19 +22,26 @@ Most typography decisions happen in code, not design tools. You set a value, rel
 
 Inspired by [Dialkit](https://joshpuckett.me/dialkit) and [Agentation](https://agentation.com).
 
-## Usage
+## Use it on your dev project
 
-No install, no build step. Open `index.html` in a browser.
+Add one line to your HTML during development — remove it before shipping:
 
-To use it on your own page, open both files side by side — TypeSet in one tab, your page in another. Use the Copy button to transfer values.
+```html
+<script src="https://32lngs-js.github.io/typeset/typeset-overlay.js"></script>
+```
+
+The TypeSet panel appears in the corner of your page whenever you run a dev server. Click any text element, scrub the sliders, click Copy when it feels right. No install, no build step, nothing to configure.
+
+**With a coding agent (Claude Code):** install `typeset-mcp` once and changes flow directly to the agent — no copy-paste. See [`mcp-server/README.md`](mcp-server/README.md).
 
 ## Use it on any page (overlay)
 
-`index.html` is the standalone demo. To inspect a *real* project's typography, use the injectable overlay — `typeset-overlay.js`. It mounts inside a Shadow DOM (so the host page's CSS can't touch it and vice versa), lets you click any text element on the page to edit it live, and Copy CSS emits real `selector { ... }` blocks you can paste into that project's stylesheet.
+To inspect pages you don't control — staging, live sites, other people's projects:
 
-- **Bookmarklet:** see `bookmarklet.txt` — one bookmark, click to toggle on any page.
+- **Bookmarklet:** see `bookmarklet.txt` — one bookmark in your browser bar, click to toggle TypeSet on any page.
 - **Console:** paste the contents of `typeset-overlay.js` into DevTools on the target page.
-- Re-run to toggle it off. Edits are inline styles (they reset on reload — Copy CSS is how you keep them). Picked fonts must be web-loaded or they fall back. Some sites block injected scripts via CSP; console-paste is the fallback there.
+
+Edits are inline styles (they reset on reload — Copy is how you keep them). Some sites block injected scripts via CSP; console-paste is the fallback there.
 
 ## Fonts
 
