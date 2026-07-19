@@ -104,11 +104,14 @@
     .version-add-row { padding:7px 12px; font-size:11px; color:var(--text-lo); cursor:pointer; transition:background .1s,color .1s; }
     .version-add-row:hover { background:var(--bg-hover); color:var(--text-hi); }
 
-    /* change badges — floating over each edited host element (click to re-select) */
-    .ts-badge { position:fixed; transform:translate(-50%,-50%); width:20px; height:20px; border-radius:50%;
-      background:#22c55e; color:#fff; font:700 10px/1 'Inter',sans-serif; display:flex; align-items:center; justify-content:center;
-      pointer-events:auto; cursor:pointer; z-index:2147483646; box-shadow:0 1px 6px rgba(0,0,0,0.22); }
-    .ts-badge:hover { background:#16a34a; }
+    /* change badges — floating over each edited element. blue = single edit,
+       green = group edit (agentation marker convention). Click to re-select. */
+    .ts-badge { position:fixed; transform:translate(-50%,-50%); min-width:20px; height:20px; padding:0 6px; border-radius:999px;
+      color:#fff; font:700 10px/1 'Inter',sans-serif; display:flex; align-items:center; justify-content:center;
+      pointer-events:auto; cursor:pointer; z-index:2147483646; box-shadow:0 1px 6px rgba(0,0,0,0.28); }
+    .ts-badge.single { background:#3c82f7; }
+    .ts-badge.group  { background:#22c55e; }
+    .ts-badge:hover { filter:brightness(1.12); }
 
     .pb { overflow-y:auto; max-height:calc(100vh - 160px); position:relative; }
     .select-hint { font-size:11px; color:var(--hint-col); text-align:center; letter-spacing:0.02em; display:none; }
@@ -166,12 +169,12 @@
     .ts-box { position:fixed; pointer-events:none; z-index:2147483646; border-radius:2px; display:none; }
     #hoverBox { border:1.5px dashed rgba(0,102,255,0.7); background:rgba(0,102,255,0.06); }
     #marquee { border:1.5px solid rgba(0,102,255,0.85); background:rgba(0,102,255,0.1); }
-    /* one outline per selected element (multi-select) */
-    .ts-selbox { position:fixed; pointer-events:none; z-index:2147483646; border-radius:2px; border:2px solid #0066ff; box-shadow:0 0 0 1px rgba(0,102,255,0.25); }
+    /* one outline per selected element — blue single, green group (agentation) */
+    .ts-selbox { position:fixed; pointer-events:none; z-index:2147483646; border-radius:2px; border:2px solid #3c82f7; box-shadow:0 0 0 1px rgba(60,130,247,0.25); }
+    .ts-selbox.group { border-color:#22c55e; box-shadow:0 0 0 1px rgba(34,197,94,0.3); }
   `;
 
-  const CROSS = '<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1v11M1 6.5h11" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="6.5" cy="6.5" r="2.4" stroke="currentColor" stroke-width="1.2"/></svg>';
-  const COPY = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="4" y="4" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.1"/><path d="M3 8H2a1 1 0 01-1-1V2a1 1 0 011-1h5a1 1 0 011 1v1" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>';
+  const COPY ='<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="4" y="4" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.1"/><path d="M3 8H2a1 1 0 01-1-1V2a1 1 0 011-1h5a1 1 0 011 1v1" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>';
   const THEME = '<svg width="11" height="11" viewBox="0 0 11 11" fill="none"><circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" stroke-width="1"/><path d="M5.5 1 A4.5 4.5 0 0 0 5.5 10 Z" fill="currentColor"/></svg>';
   const MINI = '<svg width="10" height="2" viewBox="0 0 10 2" fill="none"><rect width="10" height="1.5" rx="0.75" fill="currentColor"/></svg>';
   const CHEV = '<svg class="chev" width="8" height="5" viewBox="0 0 8 5" fill="none"><path d="M1 1l3 3 3-3" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -194,7 +197,6 @@
               <button class="version-btn" id="versionBtn"><span id="versionLabel">V1</span>${CHEV}</button>
               <div class="version-menu" id="versionMenu"></div>
             </div>
-            <button class="icon-btn pick-btn active" id="pickBtn" title="Select mode — click elements to edit. Toggle off to use the page (Esc).">${CROSS}</button>
             <button class="copy-btn" id="copyBtn" title="Copy CSS">${COPY}</button>
             <button class="icon-btn" id="themeBtn" title="Toggle theme">${THEME}</button>
             <button class="icon-btn" id="minBtn" title="Minimize">${MINI}</button>
@@ -246,7 +248,7 @@
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
   const panel = $('panel'), panelInner = panel.querySelector('.panel-inner');
   const selectHint = $('selectHint'), controls = $('controls');
-  const copyBtn = $('copyBtn'), resetBtn = $('resetBtn'), themeBtn = $('themeBtn'), minBtn = $('minBtn'), pickBtn = $('pickBtn');
+  const copyBtn = $('copyBtn'), resetBtn = $('resetBtn'), themeBtn = $('themeBtn'), minBtn = $('minBtn');
   const hoverBox = $('hoverBox'), marquee = $('marquee'), phTitle = panel.querySelector('.ph-title');
   const fontPicker = $('fontPicker'), fontTrigger = $('fontTrigger'), fontTriggerName = $('fontTriggerName'), fontList = $('fontList');
 
@@ -321,13 +323,19 @@
   const isChanged = el => { const s = el.style; return !!(s.fontFamily || s.fontSize || s.fontWeight || s.lineHeight || s.letterSpacing || s.textAlign || s.maxWidth || (s.transform && s.transform !== 'none')); };
   function updateBadges() {
     badgeNodes.forEach(b => b.node.remove()); badgeNodes.length = 0;
-    let i = 0;
+    if (minimized) return;                 // badges only show while the tool is open
     edited.forEach(el => {
       if (!isChanged(el)) return;
-      i++;
+      const m = el.__tsMark, group = !!(m && m.group);
       const node = document.createElement('div');
-      node.className = 'ts-badge'; node.textContent = i; node.title = 'Edited — click to select';
-      node.addEventListener('click', e => { e.stopPropagation(); e.preventDefault(); setPicking(false); selectEl(el); });
+      node.className = 'ts-badge ' + (group ? 'group' : 'single');
+      node.textContent = m && m.num != null ? m.num : '•';
+      node.title = (group ? 'Group edit' : 'Single edit') + ' — click to select';
+      node.addEventListener('click', e => {
+        e.stopPropagation(); e.preventDefault();
+        if (group && m.els.length) setSelection(m.els.filter(x => document.contains(x)));
+        else selectEl(el);
+      });
       root.appendChild(node); badgeNodes.push({ el, node });
     });
     positionBadges();
@@ -358,6 +366,8 @@
     panel.classList.remove('minimized');
     panel.style.width = PANEL_W + 'px'; panel.style.height = targetH + 'px'; panel.style.borderRadius = '14px';
     layoutExpanded(); minimized = false;
+    document.body && (document.body.style.cursor = 'crosshair');   // select mode on
+    updateBadges();
   }
   function collapse() {
     if (minimized) return;
@@ -367,6 +377,8 @@
     panel.classList.add('minimized');
     panel.style.width = ICON + 'px'; panel.style.height = ICON + 'px'; panel.style.borderRadius = '50%';
     layoutCollapsed(); minimized = true;
+    document.body && (document.body.style.cursor = '');   // release the page
+    hoverBox.style.display = 'none'; marquee.style.display = 'none'; updateBadges();
   }
 
   const DRAG_EXCLUDE = '.icon-btn,.copy-btn,.pick-btn,.ts-slider,.font-picker,.align-btn,.reset-btn,input';
@@ -395,13 +407,9 @@
   themeBtn.addEventListener('click', e => { e.stopPropagation(); panel.classList.toggle('panel-light'); });
 
   // ── Element picking on the host page ──
-  let picking = false;
-  function setPicking(on) {
-    picking = on;
-    pickBtn.classList.toggle('active', on);
-    hoverBox.style.display = 'none'; marquee.style.display = 'none';
-    document.body && (document.body.style.cursor = on ? 'crosshair' : '');
-  }
+  // Select-mode is active whenever the panel is EXPANDED. Minimizing to the dial
+  // releases the page (clicks pass through) — the minimize button is the on/off.
+  const selecting = () => !minimized;
   function boxTo(box, el) {
     if (!el) { box.style.display = 'none'; return; }
     const r = el.getBoundingClientRect();
@@ -409,18 +417,36 @@
     box.style.width = r.width + 'px'; box.style.height = r.height + 'px';
   }
 
-  // One outline element per selected host element.
+  // One outline per selected element — blue for a single, green for a group.
   const selBoxes = [];  // {el, node}
   function updateSelBoxes() {
     while (selBoxes.length < selection.length) { const n = document.createElement('div'); n.className = 'ts-selbox'; root.appendChild(n); selBoxes.push({ el: null, node: n }); }
     while (selBoxes.length > selection.length) { selBoxes.pop().node.remove(); }
-    selection.forEach((el, i) => { selBoxes[i].el = el; boxTo(selBoxes[i].node, el); });
+    const group = selection.length > 1;
+    selection.forEach((el, i) => { selBoxes[i].el = el; selBoxes[i].node.classList.toggle('group', group); boxTo(selBoxes[i].node, el); });
   }
   function positionSelBoxes() { selBoxes.forEach(b => { if (b.el) boxTo(b.node, b.el); }); }
 
   const inOverlay = e => e.composedPath().includes(hostEl);
   const hasText = el => [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim().length);
   const pickable = el => el && el !== hostEl && el !== document.documentElement && el !== document.body && !hostEl.contains(el);
+
+  // ── Marks: each edit gets a number; single = blue, group = green (agentation) ──
+  let markCounter = 0, currentMark = null;
+  function markForSelection() {
+    if (selection.length) {                 // reuse if this exact set already forms a mark
+      const m = selection[0].__tsMark;
+      if (m && m.num != null && m.els.length === selection.length && selection.every(e => e.__tsMark === m)) return m;
+    }
+    return { num: null, group: selection.length > 1, els: selection.slice() };
+  }
+  function commitMark() {                    // called when an edit actually changes the selection
+    if (!currentMark || !selection.length) return;
+    if (currentMark.num == null) currentMark.num = ++markCounter;
+    currentMark.group = selection.length > 1;
+    currentMark.els = selection.slice();
+    selection.forEach(el => el.__tsMark = currentMark);
+  }
 
   function updateHint() {
     phTitle.textContent = selection.length > 1 ? `TypeSet · ${selection.length}` : 'TypeSet';
@@ -431,6 +457,7 @@
     selection = els.slice();
     active = selection[selection.length - 1] || null;
     if (active) { const m = new DOMMatrix(getComputedStyle(active).transform); txX = Math.round(m.m41); txY = Math.round(m.m42); syncFrom(active); }
+    currentMark = markForSelection();
     updateHint(); updateSelBoxes(); resyncHeight();
   }
   // additive = shift held: toggle this element in/out of the current selection
@@ -449,48 +476,44 @@
     return hits;
   }
 
-  // Pointer flow while picking: a click (no drag) picks one (shift = add);
-  // a drag draws a marquee and selects every text element it overlaps.
+  // While expanded: a click (no drag) selects one (shift-click toggles into a
+  // group); a drag draws a marquee and selects every text element it overlaps.
   let mDown = false, mMoved = false, mx0 = 0, my0 = 0, mShift = false;
   function onPD(e) {
-    if (inOverlay(e)) return;
-    if (!picking && !e.shiftKey) return;   // when not in select mode, only shift-clicks extend the selection
+    if (inOverlay(e) || !selecting()) return;
     e.preventDefault(); e.stopPropagation();
     mDown = true; mMoved = false; mx0 = e.clientX; my0 = e.clientY; mShift = e.shiftKey;
   }
   function onPM(e) {
     if (mDown) {
       if (!mMoved && Math.hypot(e.clientX - mx0, e.clientY - my0) > 6) mMoved = true;
-      if (mMoved && picking) {
+      if (mMoved) {
         const l = Math.min(mx0, e.clientX), t = Math.min(my0, e.clientY), r = Math.max(mx0, e.clientX), b = Math.max(my0, e.clientY);
         marquee.style.display = 'block'; marquee.style.left = l + 'px'; marquee.style.top = t + 'px'; marquee.style.width = (r - l) + 'px'; marquee.style.height = (b - t) + 'px';
         hoverBox.style.display = 'none';
       }
       return;
     }
-    if (picking) { const el = document.elementFromPoint(e.clientX, e.clientY); pickable(el) ? boxTo(hoverBox, el) : (hoverBox.style.display = 'none'); }
+    if (selecting()) { const el = document.elementFromPoint(e.clientX, e.clientY); pickable(el) ? boxTo(hoverBox, el) : (hoverBox.style.display = 'none'); }
   }
   function onPU(e) {
     if (!mDown) return;
     mDown = false; marquee.style.display = 'none';
-    // Select-mode is PERSISTENT: a plain click switches the selection but stays
-    // in select-mode so you can keep clicking element to element. Toggle it off
-    // with the crosshair button (or Esc) when you want to use the page normally.
-    if (mMoved && picking) {
+    if (mMoved) {
       const l = Math.min(mx0, e.clientX), t = Math.min(my0, e.clientY), r = Math.max(mx0, e.clientX), b = Math.max(my0, e.clientY);
       const hits = elementsInRect(l, t, r, b);
       if (hits.length) setSelection(mShift ? [...new Set([...selection, ...hits])] : hits);
-    } else if (!mMoved) {
+    } else {
       const el = document.elementFromPoint(e.clientX, e.clientY);
       if (pickable(el)) selectEl(el, mShift);
+      else if (!mShift) setSelection([]);    // click empty space clears the selection
     }
     hoverBox.style.display = 'none';
   }
   document.addEventListener('pointerdown', onPD, true);
   document.addEventListener('pointermove', onPM, true);
   document.addEventListener('pointerup', onPU, true);
-  pickBtn.addEventListener('click', e => { e.stopPropagation(); setPicking(!picking); });
-  const onScroll = () => { positionSelBoxes(); positionBadges(); if (picking) hoverBox.style.display = 'none'; };
+  const onScroll = () => { positionSelBoxes(); positionBadges(); if (selecting()) hoverBox.style.display = 'none'; };
   window.addEventListener('scroll', onScroll, true);
   window.addEventListener('resize', () => { positionSelBoxes(); positionBadges(); if (minimized) { iconX = clamp(iconX, 0, innerWidth - ICON); iconY = clamp(iconY, 0, innerHeight - ICON); layoutCollapsed(); } });
 
@@ -523,7 +546,7 @@
     }).join('');
     fontList.querySelectorAll('.font-item').forEach(item => item.addEventListener('click', () => {
       const val = item.dataset.value;
-      if (selection.length) { pushUndo(); selection.forEach(el => { el.style.fontFamily = val; trackEdited(el); }); saveCurrentVersion(); setFontUI(val); updateSelBoxes(); }
+      if (selection.length) { pushUndo(); selection.forEach(el => { el.style.fontFamily = val; trackEdited(el); }); commitMark(); saveCurrentVersion(); setFontUI(val); updateSelBoxes(); }
       closeFontList();
     }));
   }
@@ -615,6 +638,7 @@
       else if (prop === 'translateX' || prop === 'translateY') s.transform = `translate(${txX}px,${txY}px)`;
       trackEdited(el);
     });
+    commitMark();
     updateRowTrack(prop, val); saveCurrentVersion(); updateSelBoxes();
   }
 
@@ -670,12 +694,12 @@
   root.querySelectorAll('.align-btn').forEach(btn => btn.addEventListener('click', () => {
     root.querySelectorAll('.align-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    if (selection.length) { pushUndo(); selection.forEach(el => { el.style.textAlign = btn.dataset.align; trackEdited(el); }); saveCurrentVersion(); updateSelBoxes(); }
+    if (selection.length) { pushUndo(); selection.forEach(el => { el.style.textAlign = btn.dataset.align; trackEdited(el); }); commitMark(); saveCurrentVersion(); updateSelBoxes(); }
   }));
   resetBtn.addEventListener('click', () => {
     if (!selection.length) return; pushUndo();
     const props = ['fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'fontFamily', 'textAlign', 'transform', 'maxWidth'];
-    selection.forEach(el => props.forEach(p => el.style[p] = ''));
+    selection.forEach(el => { props.forEach(p => el.style[p] = ''); el.__tsMark = null; });
     txX = 0; txY = 0; if (active) syncFrom(active); saveCurrentVersion(); updateSelBoxes();
   });
 
@@ -715,7 +739,7 @@
 
   // ── Keyboard ──
   function onKey(e) {
-    if (e.key === 'Escape' && picking) { setPicking(false); return; }
+    if (e.key === 'Escape' && selection.length) { setSelection([]); return; }
     if (!e.metaKey && !e.ctrlKey) return;
     if (e.key === 'z' && !e.shiftKey) { e.preventDefault(); popUndo(); }
     else if (e.key === 'c' && active && !window.getSelection().toString()) { e.preventDefault(); triggerCopy(); }
@@ -732,7 +756,7 @@
     iconX = window.innerWidth - ICON - 20; iconY = 20;
     panel.offsetHeight; panel.style.transition = '';
     renderVersionMenu();
-    setPicking(true);
+    document.body && (document.body.style.cursor = 'crosshair');   // expanded == select mode
   })();
 
   // ── Teardown (re-run script to toggle off) ──
