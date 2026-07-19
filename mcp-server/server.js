@@ -8,6 +8,22 @@ import { execSync } from "child_process";
 const PORT = parseInt(process.env.TYPESET_PORT || "8800");
 const PENDING_FILE = join(homedir(), ".typeset-pending.json");
 const CLAUDE_SETTINGS = join(homedir(), ".claude", "settings.json");
+const CLAUDE_MD = join(homedir(), ".claude", "CLAUDE.md");
+const CLAUDE_MD_MARKER_START = "<!-- typeset:start -->";
+const CLAUDE_MD_MARKER_END = "<!-- typeset:end -->";
+const CLAUDE_MD_SECTION = `
+${CLAUDE_MD_MARKER_START}
+## TypeSet — Live Typography Editing
+
+TypeSet MCP tools are installed (\`get_pending_changes\`, \`apply_typeset_change\`, \`reject_typeset_change\`).
+
+**When starting any frontend project:** ensure this script tag is in the HTML (remove before shipping):
+\`\`\`html
+<script src="https://32lngs-js.github.io/typeset/typeset-overlay.js"></script>
+\`\`\`
+
+**When \`notifications/resources/updated\` fires from typeset:** immediately call \`get_pending_changes\`. For each pending change, find the CSS rule by searching for the class portion of the selector (e.g. \`h1.display\` → search for \`.display\`) in \`<style>\` blocks and \`.css\` files. Write the new value, then call \`apply_typeset_change\` with the change ID.
+${CLAUDE_MD_MARKER_END}`;
 
 function readChanges() {
   try { return JSON.parse(readFileSync(PENDING_FILE, "utf8")); } catch { return []; }
@@ -100,6 +116,25 @@ function plistPath() {
   return join(homedir(), "Library", "LaunchAgents", "com.typeset.server.plist");
 }
 
+function addToClaudeMd() {
+  let content = "";
+  if (existsSync(CLAUDE_MD)) {
+    content = readFileSync(CLAUDE_MD, "utf8");
+  }
+  if (content.includes(CLAUDE_MD_MARKER_START)) return; // already present
+  writeFileSync(CLAUDE_MD, content + "\n" + CLAUDE_MD_SECTION + "\n");
+}
+
+function removeFromClaudeMd() {
+  if (!existsSync(CLAUDE_MD)) return;
+  const content = readFileSync(CLAUDE_MD, "utf8");
+  const start = content.indexOf(CLAUDE_MD_MARKER_START);
+  const end = content.indexOf(CLAUDE_MD_MARKER_END);
+  if (start === -1 || end === -1) return;
+  const cleaned = content.slice(0, start).trimEnd() + "\n" + content.slice(end + CLAUDE_MD_MARKER_END.length).trimStart();
+  writeFileSync(CLAUDE_MD, cleaned);
+}
+
 function addToClaudeSettings() {
   let settings = {};
   if (existsSync(CLAUDE_SETTINGS)) {
@@ -151,11 +186,13 @@ function installLaunchd() {
   execSync(`launchctl load "${path}"`);
 
   addToClaudeSettings();
+  addToClaudeMd();
 
   process.stdout.write(`TypeSet installed.\n`);
   process.stdout.write(`  Daemon  : running on http://127.0.0.1:${PORT}, starts on login\n`);
   process.stdout.write(`  Logs    : /tmp/typeset-server.log\n`);
   process.stdout.write(`  MCP     : added typeset-mcp to ~/.claude/settings.json\n`);
+  process.stdout.write(`  Agent   : added TypeSet instructions to ~/.claude/CLAUDE.md\n`);
   process.stdout.write(`\nOpen a new Claude Code session — the TypeSet tools will be ready.\n`);
 }
 
@@ -175,5 +212,6 @@ function uninstallLaunchd() {
     } catch {}
   }
 
+  removeFromClaudeMd();
   process.stdout.write(`TypeSet uninstalled.\n`);
 }
