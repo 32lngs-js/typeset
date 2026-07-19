@@ -1,6 +1,6 @@
 {
   "name": "typeset-mcp",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "MCP server that bridges the TypeSet browser overlay to coding agents — live CSS changes flow from browser to agent without copy-paste",
   "type": "module",
   "bin": {
