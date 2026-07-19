@@ -2,3 +2,4 @@
 fonts/sohne/
 .vite/
 node_modules/
+.typeset-pending.json
