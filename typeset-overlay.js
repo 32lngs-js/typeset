@@ -167,15 +167,14 @@
        NOTE: these are siblings of #panel, so #panel's --accent is out of scope —
        use literal colors here. */
     .ts-box { position:fixed; pointer-events:none; z-index:2147483646; border-radius:4px; display:none; }
-    #hoverBox { border:2px solid rgba(60,130,247,0.5); background:rgba(60,130,247,0.06); }
-    #marquee { border:1.5px solid rgba(60,130,247,0.85); background:rgba(60,130,247,0.1); }
-    /* one outline per selected element — blue single, green group (agentation
-       selected style: 2px border + light fill + soft halo, rounded). */
+    #hoverBox { border:2px solid rgba(60,130,247,0.45); background:rgba(60,130,247,0.05); }
+    /* dragging a marquee is always a multi-select -> green (agentation) */
+    #marquee { border:1.5px dashed rgba(34,197,94,0.7); background:rgba(34,197,94,0.08); }
+    /* one outline per selected element — LIGHT semi-transparent border + faint
+       fill, matching agentation (border = accent/green ~55%, fill ~5%, no halo). */
     .ts-selbox { position:fixed; pointer-events:none; z-index:2147483646; border-radius:4px;
-      border:2px solid #3c82f7; background:rgba(59,130,246,0.08);
-      box-shadow:0 0 0 2px rgba(59,130,246,0.15), 0 2px 8px rgba(59,130,246,0.15); }
-    .ts-selbox.group { border-color:#22c55e; background:rgba(34,197,94,0.08);
-      box-shadow:0 0 0 2px rgba(34,197,94,0.15), 0 2px 8px rgba(34,197,94,0.15); }
+      border:2px solid rgba(60,130,247,0.55); background:rgba(60,130,247,0.05); }
+    .ts-selbox.group { border-color:rgba(34,197,94,0.6); background:rgba(34,197,94,0.06); }
     /* dark pill descriptor label (agentation hover tooltip) */
     .ts-label { position:fixed; display:none; z-index:2147483647; pointer-events:none;
       font:500 11px/1.3 'Inter',system-ui,sans-serif; color:#fff; background:rgba(0,0,0,0.85);
