@@ -1,0 +1,9 @@
+{
+  "name": "typeset-mcp-server",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": "index.js",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1"
+  }
+}

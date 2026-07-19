@@ -231,15 +231,15 @@
             <button class="icon-btn" id="minBtn" title="Minimize">${MINI}</button>
           </div>
         </div>
-        <div class="toolbar" id="toolbar">
-          <button class="tb-btn" id="addVersionBtn" title="Add version">${ADDV}</button>
-          <div class="version-wrap" id="versionWrap">
-            <button class="tb-preset" id="versionBtn"><span id="versionLabel">Version 1</span>${CHEV}</button>
-            <div class="version-menu" id="versionMenu"></div>
-          </div>
-          <button class="tb-btn" id="copyBtn" title="Copy CSS">${COPY}</button>
-        </div>
         <div class="pb" id="panelBody">
+          <div class="toolbar" id="toolbar">
+            <button class="tb-btn" id="addVersionBtn" title="Add version">${ADDV}</button>
+            <div class="version-wrap" id="versionWrap">
+              <button class="tb-preset" id="versionBtn"><span id="versionLabel">Version 1</span>${CHEV}</button>
+              <div class="version-menu" id="versionMenu"></div>
+            </div>
+            <button class="tb-btn" id="copyBtn" title="Copy CSS">${COPY}</button>
+          </div>
           <div class="select-hint visible" id="selectHint">Select text to edit</div>
           <div id="controls" class="disabled">
             <div class="section-head"><span>Typography</span></div>
@@ -897,10 +897,17 @@
     return sel;
   }
   const CSS_escape = s => (window.CSS && CSS.escape) ? CSS.escape(s) : s.replace(/[^a-zA-Z0-9_-]/g, '\\$&');
+  const MCP_PORT = 8800;
+  const PROP_MAP = [
+    ['fontFamily', 'font-family'], ['fontSize', 'font-size'], ['fontWeight', 'font-weight'],
+    ['lineHeight', 'line-height'], ['letterSpacing', 'letter-spacing'], ['textAlign', 'text-align'],
+    ['maxWidth', 'max-width'], ['padding', 'padding'], ['borderRadius', 'border-radius'],
+    ['opacity', 'opacity'], ['fontStyle', 'font-style'], ['textDecoration', 'text-decoration'],
+  ];
   function triggerCopy() {
-    const blocks = [];
+    const blocks = [], mcpChanges = [];
     edited.forEach(el => {
-      const s = el.style;
+      const s = el.style, sel = cssSelector(el), cs = getComputedStyle(el);
       const lines = [
         s.fontFamily && `font-family: ${s.fontFamily};`,
         s.fontSize && `font-size: ${s.fontSize};`,
@@ -916,7 +923,11 @@
         s.textDecoration && `text-decoration: ${s.textDecoration};`,
         s.transform && s.transform !== 'none' && `transform: ${s.transform};`,
       ].filter(Boolean);
-      if (lines.length) blocks.push(`${cssSelector(el)} {\n  ${lines.join('\n  ')}\n}`);
+      if (lines.length) blocks.push(`${sel} {\n  ${lines.join('\n  ')}\n}`);
+      PROP_MAP.forEach(([js, css]) => {
+        if (s[js]) mcpChanges.push({ selector: sel, property: css, value: s[js], previousValue: cs[js] || null });
+      });
+      if (s.transform && s.transform !== 'none') mcpChanges.push({ selector: sel, property: 'transform', value: s.transform, previousValue: null });
     });
     if (!blocks.length) return;
     navigator.clipboard.writeText('/* TypeSet — ' + versions[currentVersionIdx].name + ' */\n\n' + blocks.join('\n\n')).then(() => {
@@ -925,6 +936,12 @@
       copyBtn.classList.add('copied');
       setTimeout(() => { copyBtn.innerHTML = orig; copyBtn.classList.remove('copied'); }, 1500);
     });
+    if (mcpChanges.length) {
+      fetch(`http://127.0.0.1:${MCP_PORT}/commit`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(mcpChanges),
+      }).catch(() => {});
+    }
   }
   copyBtn.addEventListener('click', triggerCopy);
 
