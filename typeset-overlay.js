@@ -36,7 +36,7 @@
     #panel {
       --bg:#141414; --bg-hover:rgba(255,255,255,0.06); --border:rgba(255,255,255,0.08);
       --border-sub:rgba(255,255,255,0.06); --text-hi:rgba(255,255,255,0.9);
-      --text-mid:rgba(255,255,255,0.55); --text-lo:rgba(255,255,255,0.18);
+      --text-mid:rgba(255,255,255,0.55); --text-lo:rgba(255,255,255,0.18); --hint-col:rgba(255,255,255,0.66);
       --text-val:rgba(255,255,255,0.6); --chip-bg:rgba(255,255,255,0.07);
       --chip-bdr:rgba(255,255,255,0.06); --chip-hover:rgba(255,255,255,0.12);
       --sel-bg:rgba(255,255,255,0.06); --sel-bdr:rgba(255,255,255,0.1); --sel-col:rgba(255,255,255,0.75);
@@ -61,7 +61,7 @@
 
     #panel.panel-light {
       --bg:#fff; --bg-hover:rgba(0,0,0,0.05); --border:rgba(0,0,0,0.08); --border-sub:rgba(0,0,0,0.05);
-      --text-hi:rgba(0,0,0,0.85); --text-mid:rgba(0,0,0,0.5); --text-lo:rgba(0,0,0,0.2); --text-val:rgba(0,0,0,0.55);
+      --text-hi:rgba(0,0,0,0.85); --text-mid:rgba(0,0,0,0.5); --text-lo:rgba(0,0,0,0.2); --text-val:rgba(0,0,0,0.55); --hint-col:rgba(0,0,0,0.6);
       --chip-bg:rgba(0,0,0,0.06); --chip-bdr:rgba(0,0,0,0.06); --chip-hover:rgba(0,0,0,0.1);
       --sel-bg:rgba(0,0,0,0.04); --sel-bdr:rgba(0,0,0,0.1); --sel-col:rgba(0,0,0,0.7);
       --ab-bg:rgba(0,0,0,0.04); --ab-bdr:rgba(0,0,0,0.1); --ab-col:rgba(0,0,0,0.3);
@@ -110,9 +110,9 @@
       pointer-events:auto; cursor:pointer; z-index:2147483646; box-shadow:0 1px 6px rgba(0,0,0,0.22); }
     .ts-badge:hover { background:#16a34a; }
 
-    .pb { overflow-y:auto; max-height:calc(100vh - 160px); }
-    .select-hint { font-size:11px; color:var(--text-mid); text-align:center; padding:14px 10px 10px; letter-spacing:0.02em; display:none; }
-    .select-hint.visible { display:block; }
+    .pb { overflow-y:auto; max-height:calc(100vh - 160px); position:relative; }
+    .select-hint { font-size:11px; color:var(--hint-col); text-align:center; letter-spacing:0.02em; display:none; }
+    .select-hint.visible { display:block; position:absolute; left:0; right:0; top:50%; transform:translateY(-50%); padding:0 12px; z-index:5; }
     #controls { transition:opacity .15s; }
     #controls.disabled { opacity:0.22; pointer-events:none; }
 

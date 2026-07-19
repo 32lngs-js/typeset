@@ -48,6 +48,7 @@
       --text-hi:    rgba(255,255,255,0.9);
       --text-mid:   rgba(255,255,255,0.55);
       --text-lo:    rgba(255,255,255,0.18);
+      --hint-col:   rgba(255,255,255,0.66);
       --text-val:   rgba(255,255,255,0.6);
       --chip-bg:    rgba(255,255,255,0.07);
       --chip-bdr:   rgba(255,255,255,0.06);
@@ -117,6 +118,7 @@
       --text-hi:    rgba(0,0,0,0.85);
       --text-mid:   rgba(0,0,0,0.5);
       --text-lo:    rgba(0,0,0,0.2);
+      --hint-col:   rgba(0,0,0,0.6);
       --text-val:   rgba(0,0,0,0.55);
       --chip-bg:    rgba(0,0,0,0.06);
       --chip-bdr:   rgba(0,0,0,0.06);
@@ -227,15 +229,17 @@
     .copy-btn.copied { color: #4ade80; }
 
     /* Panel body */
-    .pb { overflow-y: auto; max-height: calc(100vh - 160px); }
+    .pb { overflow-y: auto; max-height: calc(100vh - 160px); position: relative; }
 
-    /* "Select text to edit" hint */
+    /* "Select text to edit" hint — vertically centered in the (dimmed) body */
     .select-hint {
-      font-size: 11px; color: var(--text-mid);
-      text-align: center; padding: 14px 0 10px;
-      letter-spacing: 0.04em; display: none;
+      font-size: 11px; color: var(--hint-col);
+      text-align: center; letter-spacing: 0.04em; display: none;
     }
-    .select-hint.visible { display: block; }
+    .select-hint.visible {
+      display: block; position: absolute; left: 0; right: 0; top: 50%;
+      transform: translateY(-50%); padding: 0 12px; z-index: 5;
+    }
 
     /* Controls — always rendered, dimmed when nothing selected */
     #controls { transition: opacity 0.15s; }
