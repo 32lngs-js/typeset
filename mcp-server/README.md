@@ -7,7 +7,7 @@ MCP server that bridges the [TypeSet](https://github.com/32lngs-js/typeset) brow
 One command, run once ever:
 
 ```sh
-npx typeset-server install
+npx typeset-mcp install
 ```
 
 This starts a background daemon (port 8800, survives reboots) and automatically adds `typeset-mcp` to `~/.claude/settings.json`. Open a new Claude Code session and the tools are ready — no per-project setup.
@@ -67,8 +67,8 @@ If MCP tools aren't available, the daemon's HTTP API covers the full workflow:
 ## Server management
 
 ```sh
-npx typeset-server install    # Install launchd daemon, start now
-npx typeset-server uninstall  # Stop and remove daemon
+npx typeset-mcp install    # Install launchd daemon, start now
+npx typeset-mcp uninstall  # Stop and remove daemon
 ```
 
 Logs: `/tmp/typeset-server.log`
