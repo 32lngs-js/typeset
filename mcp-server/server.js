@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 import { createServer } from "http";
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync, writeFileSync, existsSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
 import { execSync } from "child_process";
 
 const PORT = parseInt(process.env.TYPESET_PORT || "8800");
-const PENDING_FILE = join(process.cwd(), ".typeset-pending.json");
+const PENDING_FILE = join(homedir(), ".typeset-pending.json");
+const CLAUDE_SETTINGS = join(homedir(), ".claude", "settings.json");
 
 function readChanges() {
   try { return JSON.parse(readFileSync(PENDING_FILE, "utf8")); } catch { return []; }
@@ -75,7 +76,7 @@ const httpServer = createServer((req, res) => {
 
   if (req.method === "GET" && req.url === "/health") {
     res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ ok: true, pending: readChanges().length, cwd: process.cwd(), port: PORT }));
+    res.end(JSON.stringify({ ok: true, pending: readChanges().length, port: PORT }));
     return;
   }
 
@@ -84,7 +85,7 @@ const httpServer = createServer((req, res) => {
 
 httpServer.on("error", err => {
   if (err.code === "EADDRINUSE") {
-    process.stderr.write(`TypeSet Server: port ${PORT} already in use. Run \`typeset-server uninstall\` then reinstall, or set TYPESET_PORT.\n`);
+    process.stderr.write(`TypeSet Server: port ${PORT} already in use. Run \`npx typeset-server uninstall\` then reinstall, or set TYPESET_PORT.\n`);
     process.exit(1);
   }
   throw err;
@@ -92,16 +93,28 @@ httpServer.on("error", err => {
 
 httpServer.listen(PORT, "127.0.0.1", () => {
   process.stderr.write(`TypeSet Server: listening on http://127.0.0.1:${PORT}\n`);
-  process.stderr.write(`TypeSet Server: project root = ${process.cwd()}\n`);
 });
 
-// --- launchd ---
+// --- launchd + settings.json ---
 function plistPath() {
   return join(homedir(), "Library", "LaunchAgents", "com.typeset.server.plist");
 }
 
+function addToClaudeSettings() {
+  let settings = {};
+  if (existsSync(CLAUDE_SETTINGS)) {
+    try { settings = JSON.parse(readFileSync(CLAUDE_SETTINGS, "utf8")); } catch {}
+  }
+  if (!settings.mcpServers) settings.mcpServers = {};
+  settings.mcpServers.typeset = {
+    command: "npx",
+    args: ["-y", "typeset-mcp"],
+    env: { PATH: "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin" },
+  };
+  writeFileSync(CLAUDE_SETTINGS, JSON.stringify(settings, null, 2));
+}
+
 function installLaunchd() {
-  const projectRoot = process.cwd();
   const nodePath = process.execPath;
   const serverPath = new URL(import.meta.url).pathname;
   const path = plistPath();
@@ -117,8 +130,6 @@ function installLaunchd() {
     <string>${nodePath}</string>
     <string>${serverPath}</string>
   </array>
-  <key>WorkingDirectory</key>
-  <string>${projectRoot}</string>
   <key>RunAtLoad</key>
   <true/>
   <key>KeepAlive</key>
@@ -138,17 +149,31 @@ function installLaunchd() {
   writeFileSync(path, plist);
   try { execSync(`launchctl unload "${path}" 2>/dev/null`); } catch {}
   execSync(`launchctl load "${path}"`);
-  process.stdout.write(`TypeSet Server installed as launchd agent\n`);
-  process.stdout.write(`  Project root : ${projectRoot}\n`);
-  process.stdout.write(`  Port         : ${PORT}\n`);
-  process.stdout.write(`  Logs         : /tmp/typeset-server.log\n`);
-  process.stdout.write(`  Plist        : ${path}\n`);
-  process.stdout.write(`Starts automatically on login. Running now.\n`);
+
+  addToClaudeSettings();
+
+  process.stdout.write(`TypeSet installed.\n`);
+  process.stdout.write(`  Daemon  : running on http://127.0.0.1:${PORT}, starts on login\n`);
+  process.stdout.write(`  Logs    : /tmp/typeset-server.log\n`);
+  process.stdout.write(`  MCP     : added typeset-mcp to ~/.claude/settings.json\n`);
+  process.stdout.write(`\nOpen a new Claude Code session — the TypeSet tools will be ready.\n`);
 }
 
 function uninstallLaunchd() {
   const path = plistPath();
   try { execSync(`launchctl unload "${path}"`); } catch {}
   try { execSync(`rm "${path}"`); } catch {}
-  process.stdout.write(`TypeSet Server uninstalled.\n`);
+
+  // Remove from settings.json
+  if (existsSync(CLAUDE_SETTINGS)) {
+    try {
+      const settings = JSON.parse(readFileSync(CLAUDE_SETTINGS, "utf8"));
+      if (settings.mcpServers?.typeset) {
+        delete settings.mcpServers.typeset;
+        writeFileSync(CLAUDE_SETTINGS, JSON.stringify(settings, null, 2));
+      }
+    } catch {}
+  }
+
+  process.stdout.write(`TypeSet uninstalled.\n`);
 }

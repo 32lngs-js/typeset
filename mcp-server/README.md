@@ -4,34 +4,13 @@ MCP server that bridges the [TypeSet](https://github.com/32lngs-js/typeset) brow
 
 ## Setup
 
-Two commands, both one-time:
-
-**1. Start the background server** (run once per project, survives reboots):
+One command, run once ever:
 
 ```sh
-cd your-project
 npx typeset-server install
 ```
 
-This installs a launchd daemon that listens for browser POSTs on port 8800 and persists changes to `.typeset-pending.json`. Starts now and on every login.
-
-**2. Add the MCP tools** to `.claude/settings.json`:
-
-```json
-{
-  "mcpServers": {
-    "typeset": {
-      "command": "npx",
-      "args": ["-y", "typeset-mcp"],
-      "env": {
-        "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
-      }
-    }
-  }
-}
-```
-
-That's it. The `typeset-mcp` tools will appear in every agent session.
+This starts a background daemon (port 8800, survives reboots) and automatically adds `typeset-mcp` to `~/.claude/settings.json`. Open a new Claude Code session and the tools are ready — no per-project setup.
 
 ## How it works
 

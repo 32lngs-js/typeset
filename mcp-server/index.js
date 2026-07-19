@@ -3,9 +3,10 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { readFileSync, writeFileSync, watch } from "fs";
 import { join } from "path";
+import { homedir } from "os";
 import { z } from "zod";
 
-const PENDING_FILE = join(process.cwd(), ".typeset-pending.json");
+const PENDING_FILE = join(homedir(), ".typeset-pending.json");
 
 function readPending() {
   try { return JSON.parse(readFileSync(PENDING_FILE, "utf8")); } catch { return []; }
@@ -15,7 +16,7 @@ function writePending(changes) {
   writeFileSync(PENDING_FILE, JSON.stringify(changes, null, 2));
 }
 
-const mcp = new McpServer({ name: "typeset", version: "0.1.4" });
+const mcp = new McpServer({ name: "typeset", version: "0.1.5" });
 
 mcp.resource(
   "pending-changes",
@@ -32,7 +33,7 @@ mcp.resource(
 
 mcp.tool(
   "get_pending_changes",
-  "List all CSS changes committed from the TypeSet browser overlay that haven't been applied yet. Each change has a selector (e.g. 'h1.display'), property, and value. To locate the CSS rule: (1) search by the class portion of the selector — e.g. for 'h1.display' search for '.display' — since rules often use class-only selectors; (2) check <style> blocks inside HTML files as well as .css files. Fallback when MCP tools are unavailable: read .typeset-pending.json in the project root, or GET http://127.0.0.1:8800/changes.",
+  "List all CSS changes committed from the TypeSet browser overlay that haven't been applied yet. Each change has a selector (e.g. 'h1.display'), property, and value. To locate the CSS rule: (1) search by the class portion of the selector — e.g. for 'h1.display' search for '.display' — since rules often use class-only selectors; (2) check <style> blocks inside HTML files as well as .css files. Fallback when MCP tools are unavailable: read ~/.typeset-pending.json, or GET http://127.0.0.1:8800/changes.",
   {},
   async () => {
     const changes = readPending();
@@ -73,8 +74,8 @@ mcp.tool(
 const transport = new StdioServerTransport();
 const server = await mcp.connect(transport);
 
-// Notify agent when typeset-server writes new changes to the pending file
-watch(process.cwd(), { persistent: false }, (_, filename) => {
+// Notify agent when typeset-server writes new changes to the global pending file
+watch(homedir(), { persistent: false }, (_, filename) => {
   if (filename === ".typeset-pending.json") {
     server.notification({ method: "notifications/resources/updated", params: { uri: "typeset://pending-changes" } });
   }
