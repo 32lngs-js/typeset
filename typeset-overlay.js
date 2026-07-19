@@ -165,7 +165,9 @@
        use literal colors here. */
     .ts-box { position:fixed; pointer-events:none; z-index:2147483646; border-radius:2px; display:none; }
     #hoverBox { border:1.5px dashed rgba(0,102,255,0.7); background:rgba(0,102,255,0.06); }
-    #selBox { border:2px solid #0066ff; box-shadow:0 0 0 1px rgba(0,102,255,0.25); }
+    #marquee { border:1.5px solid rgba(0,102,255,0.85); background:rgba(0,102,255,0.1); }
+    /* one outline per selected element (multi-select) */
+    .ts-selbox { position:fixed; pointer-events:none; z-index:2147483646; border-radius:2px; border:2px solid #0066ff; box-shadow:0 0 0 1px rgba(0,102,255,0.25); }
   `;
 
   const CROSS = '<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1v11M1 6.5h11" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="6.5" cy="6.5" r="2.4" stroke="currentColor" stroke-width="1.2"/></svg>';
@@ -199,7 +201,7 @@
           </div>
         </div>
         <div class="pb" id="panelBody">
-          <div class="select-hint visible" id="selectHint">Click any text on the page</div>
+          <div class="select-hint visible" id="selectHint">Click, shift-click, or drag to select</div>
           <div id="controls" class="disabled">
             <div class="section-head"><span>Typography</span></div>
             ${slider('fontSize','Size',8,120,0.5,'—')}
@@ -230,7 +232,7 @@
       </div>
     </div>
     <div class="ts-box" id="hoverBox"></div>
-    <div class="ts-box" id="selBox"></div>`;
+    <div class="ts-box" id="marquee"></div>`;
 
   // ── Mount in an isolated Shadow DOM ──
   const hostEl = document.createElement('div');
@@ -245,28 +247,31 @@
   const panel = $('panel'), panelInner = panel.querySelector('.panel-inner');
   const selectHint = $('selectHint'), controls = $('controls');
   const copyBtn = $('copyBtn'), resetBtn = $('resetBtn'), themeBtn = $('themeBtn'), minBtn = $('minBtn'), pickBtn = $('pickBtn');
-  const hoverBox = $('hoverBox'), selBox = $('selBox');
+  const hoverBox = $('hoverBox'), marquee = $('marquee'), phTitle = panel.querySelector('.ph-title');
   const fontPicker = $('fontPicker'), fontTrigger = $('fontTrigger'), fontTriggerName = $('fontTriggerName'), fontList = $('fontList');
 
   let active = null, txX = 0, txY = 0;
+  let selection = [];             // all currently-selected host elements (active = the primary/last)
   const edited = new Set();       // host elements TypeSet has changed (for Copy CSS)
 
   // ── Undo (stores live node refs — safe, no reload during a session) ──
   const undoStack = [];
-  function snap() {
-    if (!active) return null;
-    const s = active.style;
-    return { el: active, fontSize: s.fontSize, fontWeight: s.fontWeight, lineHeight: s.lineHeight,
-             letterSpacing: s.letterSpacing, fontFamily: s.fontFamily, textAlign: s.textAlign, transform: s.transform, maxWidth: s.maxWidth, txX, txY };
+  // Each undo entry is a snapshot of EVERY selected element (multi-select safe).
+  function snapOne(el) {
+    const s = el.style;
+    return { el, fontSize: s.fontSize, fontWeight: s.fontWeight, lineHeight: s.lineHeight,
+             letterSpacing: s.letterSpacing, fontFamily: s.fontFamily, textAlign: s.textAlign, transform: s.transform, maxWidth: s.maxWidth };
   }
-  function pushUndo() { const s = snap(); if (s) undoStack.push(s); }
+  function pushUndo() { if (selection.length) undoStack.push(selection.map(snapOne)); }
   function popUndo() {
-    const s = undoStack.pop(); if (!s) return;
-    const el = s.el;
-    el.style.fontSize = s.fontSize; el.style.fontWeight = s.fontWeight; el.style.lineHeight = s.lineHeight;
-    el.style.letterSpacing = s.letterSpacing; el.style.fontFamily = s.fontFamily; el.style.textAlign = s.textAlign; el.style.transform = s.transform; el.style.maxWidth = s.maxWidth;
-    if (active === el) { txX = s.txX; txY = s.txY; syncFrom(el); }
-    saveCurrentVersion(); positionSelBox();
+    const entry = undoStack.pop(); if (!entry) return;
+    entry.forEach(s => {
+      const st = s.el.style;
+      st.fontSize = s.fontSize; st.fontWeight = s.fontWeight; st.lineHeight = s.lineHeight;
+      st.letterSpacing = s.letterSpacing; st.fontFamily = s.fontFamily; st.textAlign = s.textAlign; st.transform = s.transform; st.maxWidth = s.maxWidth;
+    });
+    if (active) { const m = new DOMMatrix(getComputedStyle(active).transform); txX = Math.round(m.m41); txY = Math.round(m.m42); syncFrom(active); }
+    saveCurrentVersion(); updateSelBoxes();
   }
 
   // ── Versions + change badges (keyed on live element refs, not data-id) ──
@@ -294,7 +299,7 @@
   function switchVersion(idx) {
     saveCurrentVersion(); currentVersionIdx = idx; applyAllStyles(versions[idx].styles); updateBadges();
     txX = 0; txY = 0;
-    if (active) { const m = new DOMMatrix(getComputedStyle(active).transform); txX = Math.round(m.m41); txY = Math.round(m.m42); syncFrom(active); positionSelBox(); }
+    if (active) { const m = new DOMMatrix(getComputedStyle(active).transform); txX = Math.round(m.m41); txY = Math.round(m.m42); syncFrom(active); updateSelBoxes(); }
     renderVersionMenu();
   }
   function addVersion() {
@@ -394,7 +399,7 @@
   function setPicking(on) {
     picking = on;
     pickBtn.classList.toggle('active', on);
-    hoverBox.style.display = 'none';
+    hoverBox.style.display = 'none'; marquee.style.display = 'none';
     document.body && (document.body.style.cursor = on ? 'crosshair' : '');
   }
   function boxTo(box, el) {
@@ -403,36 +408,89 @@
     box.style.display = 'block'; box.style.left = r.left + 'px'; box.style.top = r.top + 'px';
     box.style.width = r.width + 'px'; box.style.height = r.height + 'px';
   }
-  const positionSelBox = () => { if (active) boxTo(selBox, active); else selBox.style.display = 'none'; };
+
+  // One outline element per selected host element.
+  const selBoxes = [];  // {el, node}
+  function updateSelBoxes() {
+    while (selBoxes.length < selection.length) { const n = document.createElement('div'); n.className = 'ts-selbox'; root.appendChild(n); selBoxes.push({ el: null, node: n }); }
+    while (selBoxes.length > selection.length) { selBoxes.pop().node.remove(); }
+    selection.forEach((el, i) => { selBoxes[i].el = el; boxTo(selBoxes[i].node, el); });
+  }
+  function positionSelBoxes() { selBoxes.forEach(b => { if (b.el) boxTo(b.node, b.el); }); }
 
   const inOverlay = e => e.composedPath().includes(hostEl);
-  function onMove(e) {
-    if (!picking) return;
-    const el = document.elementFromPoint(e.clientX, e.clientY);
-    if (!el || el === hostEl || el === document.documentElement || el === document.body) { hoverBox.style.display = 'none'; return; }
-    boxTo(hoverBox, el);
+  const hasText = el => [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim().length);
+  const pickable = el => el && el !== hostEl && el !== document.documentElement && el !== document.body && !hostEl.contains(el);
+
+  function updateHint() {
+    phTitle.textContent = selection.length > 1 ? `TypeSet · ${selection.length}` : 'TypeSet';
+    if (selection.length) { selectHint.classList.remove('visible'); controls.classList.remove('disabled'); }
+    else { selectHint.classList.add('visible'); controls.classList.add('disabled'); }
   }
-  function onPick(e) {
-    if (!picking || inOverlay(e)) return;
+  function setSelection(els) {
+    selection = els.slice();
+    active = selection[selection.length - 1] || null;
+    if (active) { const m = new DOMMatrix(getComputedStyle(active).transform); txX = Math.round(m.m41); txY = Math.round(m.m42); syncFrom(active); }
+    updateHint(); updateSelBoxes(); resyncHeight();
+  }
+  // additive = shift held: toggle this element in/out of the current selection
+  function selectEl(el, additive) {
+    if (additive) { const i = selection.indexOf(el); if (i >= 0) selection.splice(i, 1); else selection.push(el); setSelection(selection); }
+    else setSelection([el]);
+  }
+  function elementsInRect(l, t, r, b) {
+    const hits = [];
+    document.body.querySelectorAll('*').forEach(el => {
+      if (hostEl.contains(el) || !hasText(el)) return;
+      const rc = el.getBoundingClientRect();
+      if (rc.width === 0 || rc.height === 0) return;
+      if (rc.left < r && rc.right > l && rc.top < b && rc.bottom > t) hits.push(el);   // AABB overlap (agentation-style)
+    });
+    return hits;
+  }
+
+  // Pointer flow while picking: a click (no drag) picks one (shift = add);
+  // a drag draws a marquee and selects every text element it overlaps.
+  let mDown = false, mMoved = false, mx0 = 0, my0 = 0, mShift = false;
+  function onPD(e) {
+    if (inOverlay(e)) return;
+    if (!picking && !e.shiftKey) return;   // when not in select mode, only shift-clicks extend the selection
     e.preventDefault(); e.stopPropagation();
-    selectEl(e.target);
-    setPicking(false);
+    mDown = true; mMoved = false; mx0 = e.clientX; my0 = e.clientY; mShift = e.shiftKey;
   }
-  function selectEl(el) {
-    active = el;
-    const mat = new DOMMatrix(getComputedStyle(el).transform);
-    txX = Math.round(mat.m41); txY = Math.round(mat.m42);
-    syncFrom(el);
-    selectHint.classList.remove('visible'); controls.classList.remove('disabled');
-    resyncHeight(); positionSelBox();
+  function onPM(e) {
+    if (mDown) {
+      if (!mMoved && Math.hypot(e.clientX - mx0, e.clientY - my0) > 6) mMoved = true;
+      if (mMoved && picking) {
+        const l = Math.min(mx0, e.clientX), t = Math.min(my0, e.clientY), r = Math.max(mx0, e.clientX), b = Math.max(my0, e.clientY);
+        marquee.style.display = 'block'; marquee.style.left = l + 'px'; marquee.style.top = t + 'px'; marquee.style.width = (r - l) + 'px'; marquee.style.height = (b - t) + 'px';
+        hoverBox.style.display = 'none';
+      }
+      return;
+    }
+    if (picking) { const el = document.elementFromPoint(e.clientX, e.clientY); pickable(el) ? boxTo(hoverBox, el) : (hoverBox.style.display = 'none'); }
   }
-  document.addEventListener('pointermove', onMove, true);
-  document.addEventListener('click', onPick, true);
-  document.addEventListener('pointerdown', e => { if (picking && !inOverlay(e)) { e.preventDefault(); e.stopPropagation(); } }, true);
+  function onPU(e) {
+    if (!mDown) return;
+    mDown = false; marquee.style.display = 'none';
+    if (mMoved && picking) {
+      const l = Math.min(mx0, e.clientX), t = Math.min(my0, e.clientY), r = Math.max(mx0, e.clientX), b = Math.max(my0, e.clientY);
+      const hits = elementsInRect(l, t, r, b);
+      if (hits.length) setSelection(mShift ? [...new Set([...selection, ...hits])] : hits);
+      setPicking(false);
+    } else if (!mMoved) {
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      if (pickable(el)) { selectEl(el, mShift); if (!mShift) setPicking(false); }
+    }
+    hoverBox.style.display = 'none';
+  }
+  document.addEventListener('pointerdown', onPD, true);
+  document.addEventListener('pointermove', onPM, true);
+  document.addEventListener('pointerup', onPU, true);
   pickBtn.addEventListener('click', e => { e.stopPropagation(); setPicking(!picking); });
-  const onScroll = () => { positionSelBox(); positionBadges(); if (picking) hoverBox.style.display = 'none'; };
+  const onScroll = () => { positionSelBoxes(); positionBadges(); if (picking) hoverBox.style.display = 'none'; };
   window.addEventListener('scroll', onScroll, true);
-  window.addEventListener('resize', () => { positionSelBox(); positionBadges(); if (minimized) { iconX = clamp(iconX, 0, innerWidth - ICON); iconY = clamp(iconY, 0, innerHeight - ICON); layoutCollapsed(); } });
+  window.addEventListener('resize', () => { positionSelBoxes(); positionBadges(); if (minimized) { iconX = clamp(iconX, 0, innerWidth - ICON); iconY = clamp(iconY, 0, innerHeight - ICON); layoutCollapsed(); } });
 
   // ── Fonts ──
   const FONTS = [
@@ -463,7 +521,7 @@
     }).join('');
     fontList.querySelectorAll('.font-item').forEach(item => item.addEventListener('click', () => {
       const val = item.dataset.value;
-      if (active) { pushUndo(); active.style.fontFamily = val; trackEdited(active); saveCurrentVersion(); setFontUI(val); positionSelBox(); }
+      if (selection.length) { pushUndo(); selection.forEach(el => { el.style.fontFamily = val; trackEdited(el); }); saveCurrentVersion(); setFontUI(val); updateSelBoxes(); }
       closeFontList();
     }));
   }
@@ -542,16 +600,20 @@
     return 0;
   }
   function applyProp(prop, val) {
-    if (!active) return;
-    if (prop === 'fontSize') active.style.fontSize = val + 'px';
-    if (prop === 'fontWeight') active.style.fontWeight = val;
-    if (prop === 'lineHeight') active.style.lineHeight = val;
-    if (prop === 'letterSpacing') active.style.letterSpacing = val + 'em';
-    if (prop === 'translateX') { txX = val; active.style.transform = `translate(${txX}px,${txY}px)`; }
-    if (prop === 'translateY') { txY = val; active.style.transform = `translate(${txX}px,${txY}px)`; }
-    if (prop === 'maxWidth') active.style.maxWidth = val + 'px';
-    trackEdited(active);
-    updateRowTrack(prop, val); saveCurrentVersion(); positionSelBox();
+    if (!selection.length) return;
+    if (prop === 'translateX') txX = val;
+    if (prop === 'translateY') txY = val;
+    selection.forEach(el => {
+      const s = el.style;
+      if (prop === 'fontSize') s.fontSize = val + 'px';
+      else if (prop === 'fontWeight') s.fontWeight = val;
+      else if (prop === 'lineHeight') s.lineHeight = val;
+      else if (prop === 'letterSpacing') s.letterSpacing = val + 'em';
+      else if (prop === 'maxWidth') s.maxWidth = val + 'px';
+      else if (prop === 'translateX' || prop === 'translateY') s.transform = `translate(${txX}px,${txY}px)`;
+      trackEdited(el);
+    });
+    updateRowTrack(prop, val); saveCurrentVersion(); updateSelBoxes();
   }
 
   // ── Sliders ──
@@ -606,12 +668,13 @@
   root.querySelectorAll('.align-btn').forEach(btn => btn.addEventListener('click', () => {
     root.querySelectorAll('.align-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    if (active) { pushUndo(); active.style.textAlign = btn.dataset.align; trackEdited(active); saveCurrentVersion(); positionSelBox(); }
+    if (selection.length) { pushUndo(); selection.forEach(el => { el.style.textAlign = btn.dataset.align; trackEdited(el); }); saveCurrentVersion(); updateSelBoxes(); }
   }));
   resetBtn.addEventListener('click', () => {
-    if (!active) return; pushUndo();
-    ['fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'fontFamily', 'textAlign', 'transform', 'maxWidth'].forEach(p => active.style[p] = '');
-    txX = 0; txY = 0; syncFrom(active); saveCurrentVersion(); positionSelBox();
+    if (!selection.length) return; pushUndo();
+    const props = ['fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'fontFamily', 'textAlign', 'transform', 'maxWidth'];
+    selection.forEach(el => props.forEach(p => el.style[p] = ''));
+    txX = 0; txY = 0; if (active) syncFrom(active); saveCurrentVersion(); updateSelBoxes();
   });
 
   // ── Copy CSS as selector blocks ──
@@ -673,8 +736,9 @@
   // ── Teardown (re-run script to toggle off) ──
   window.__typesetOverlay = {
     destroy() {
-      document.removeEventListener('pointermove', onMove, true);
-      document.removeEventListener('click', onPick, true);
+      document.removeEventListener('pointerdown', onPD, true);
+      document.removeEventListener('pointermove', onPM, true);
+      document.removeEventListener('pointerup', onPU, true);
       document.removeEventListener('keydown', onKey, true);
       window.removeEventListener('scroll', onScroll, true);
       if (document.body) document.body.style.cursor = '';
