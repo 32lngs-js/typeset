@@ -166,12 +166,21 @@
     /* host-page highlighters (position:fixed escapes shadow, tracks viewport).
        NOTE: these are siblings of #panel, so #panel's --accent is out of scope —
        use literal colors here. */
-    .ts-box { position:fixed; pointer-events:none; z-index:2147483646; border-radius:2px; display:none; }
-    #hoverBox { border:1.5px dashed rgba(0,102,255,0.7); background:rgba(0,102,255,0.06); }
-    #marquee { border:1.5px solid rgba(0,102,255,0.85); background:rgba(0,102,255,0.1); }
-    /* one outline per selected element — blue single, green group (agentation) */
-    .ts-selbox { position:fixed; pointer-events:none; z-index:2147483646; border-radius:2px; border:2px solid #3c82f7; box-shadow:0 0 0 1px rgba(60,130,247,0.25); }
-    .ts-selbox.group { border-color:#22c55e; box-shadow:0 0 0 1px rgba(34,197,94,0.3); }
+    .ts-box { position:fixed; pointer-events:none; z-index:2147483646; border-radius:4px; display:none; }
+    #hoverBox { border:2px solid rgba(60,130,247,0.5); background:rgba(60,130,247,0.06); }
+    #marquee { border:1.5px solid rgba(60,130,247,0.85); background:rgba(60,130,247,0.1); }
+    /* one outline per selected element — blue single, green group (agentation
+       selected style: 2px border + light fill + soft halo, rounded). */
+    .ts-selbox { position:fixed; pointer-events:none; z-index:2147483646; border-radius:4px;
+      border:2px solid #3c82f7; background:rgba(59,130,246,0.08);
+      box-shadow:0 0 0 2px rgba(59,130,246,0.15), 0 2px 8px rgba(59,130,246,0.15); }
+    .ts-selbox.group { border-color:#22c55e; background:rgba(34,197,94,0.08);
+      box-shadow:0 0 0 2px rgba(34,197,94,0.15), 0 2px 8px rgba(34,197,94,0.15); }
+    /* dark pill descriptor label (agentation hover tooltip) */
+    .ts-label { position:fixed; display:none; z-index:2147483647; pointer-events:none;
+      font:500 11px/1.3 'Inter',system-ui,sans-serif; color:#fff; background:rgba(0,0,0,0.85);
+      padding:4px 8px; border-radius:6px; max-width:340px; white-space:nowrap; overflow:hidden;
+      text-overflow:ellipsis; box-shadow:0 2px 10px rgba(0,0,0,0.35); }
   `;
 
   const COPY ='<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="4" y="4" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.1"/><path d="M3 8H2a1 1 0 01-1-1V2a1 1 0 011-1h5a1 1 0 011 1v1" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>';
@@ -234,7 +243,8 @@
       </div>
     </div>
     <div class="ts-box" id="hoverBox"></div>
-    <div class="ts-box" id="marquee"></div>`;
+    <div class="ts-box" id="marquee"></div>
+    <div class="ts-label" id="hoverLabel"></div>`;
 
   // ── Mount in an isolated Shadow DOM ──
   const hostEl = document.createElement('div');
@@ -249,7 +259,7 @@
   const panel = $('panel'), panelInner = panel.querySelector('.panel-inner');
   const selectHint = $('selectHint'), controls = $('controls');
   const copyBtn = $('copyBtn'), resetBtn = $('resetBtn'), themeBtn = $('themeBtn'), minBtn = $('minBtn');
-  const hoverBox = $('hoverBox'), marquee = $('marquee'), phTitle = panel.querySelector('.ph-title');
+  const hoverBox = $('hoverBox'), marquee = $('marquee'), hoverLabel = $('hoverLabel'), phTitle = panel.querySelector('.ph-title');
   const fontPicker = $('fontPicker'), fontTrigger = $('fontTrigger'), fontTriggerName = $('fontTriggerName'), fontList = $('fontList');
 
   let active = null, txX = 0, txY = 0;
@@ -378,7 +388,7 @@
     panel.style.width = ICON + 'px'; panel.style.height = ICON + 'px'; panel.style.borderRadius = '50%';
     layoutCollapsed(); minimized = true;
     document.body && (document.body.style.cursor = '');   // release the page
-    hoverBox.style.display = 'none'; marquee.style.display = 'none'; updateBadges();
+    hideHover(); marquee.style.display = 'none'; updateBadges();
   }
 
   const DRAG_EXCLUDE = '.icon-btn,.copy-btn,.pick-btn,.ts-slider,.font-picker,.align-btn,.reset-btn,input';
@@ -430,6 +440,41 @@
   const inOverlay = e => e.composedPath().includes(hostEl);
   const hasText = el => [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim().length);
   const pickable = el => el && el !== hostEl && el !== document.documentElement && el !== document.body && !hostEl.contains(el);
+
+  // Human-readable element descriptor — ported from agentation's label logic.
+  function describeElement(el) {
+    const tag = el.tagName.toLowerCase();
+    const text = (el.textContent || '').trim();
+    if (/^h[1-6]$/.test(tag)) return text ? `${tag} "${text.slice(0, 35)}"` : tag;
+    if (tag === 'p') return text ? `paragraph: "${text.slice(0, 40)}${text.length > 40 ? '...' : ''}"` : 'paragraph';
+    if (tag === 'span' || tag === 'label') return (text && text.length < 40) ? `"${text}"` : tag;
+    if (tag === 'li') return (text && text.length < 40) ? `list item: "${text.slice(0, 35)}"` : 'list item';
+    if (tag === 'a') return text ? `link: "${text.slice(0, 35)}"` : 'link';
+    if (tag === 'button') return text ? `button "${text.slice(0, 30)}"` : 'button';
+    if (tag === 'blockquote') return 'blockquote';
+    if (tag === 'code') return (text && text.length < 30) ? `code: \`${text}\`` : 'code';
+    if (tag === 'pre') return 'code block';
+    if (tag === 'img') { const alt = el.getAttribute('alt'); return alt ? `image "${alt.slice(0, 30)}"` : 'image'; }
+    if (['div', 'section', 'article', 'nav', 'header', 'footer', 'aside', 'main'].includes(tag)) {
+      const aria = el.getAttribute('aria-label'); if (aria) return `${tag} [${aria}]`;
+      const role = el.getAttribute('role'); if (role) return role;
+      const cls = typeof el.className === 'string' ? el.className.trim() : '';
+      if (cls) return cls.split(/[\s_-]+/).filter(Boolean).slice(0, 2).join(' ');   // e.g. "flex flex-col" -> "flex flex"
+      return tag;
+    }
+    return text ? `${tag} "${text.slice(0, 30)}"` : tag;
+  }
+  function showLabel(el) {
+    hoverLabel.textContent = describeElement(el);
+    hoverLabel.style.display = 'block';
+    const r = el.getBoundingClientRect();
+    const lw = hoverLabel.offsetWidth, lh = hoverLabel.offsetHeight;
+    let left = clamp(r.left + r.width / 2 - lw / 2, 4, window.innerWidth - lw - 4);
+    let top = r.top - lh - 6;
+    if (top < 4) top = r.top + 6;   // no room above -> tuck just inside the top
+    hoverLabel.style.left = left + 'px'; hoverLabel.style.top = top + 'px';
+  }
+  const hideHover = () => { hoverBox.style.display = 'none'; hoverLabel.style.display = 'none'; };
 
   // ── Marks: each edit gets a number; single = blue, group = green (agentation) ──
   let markCounter = 0, currentMark = null;
@@ -490,11 +535,11 @@
       if (mMoved) {
         const l = Math.min(mx0, e.clientX), t = Math.min(my0, e.clientY), r = Math.max(mx0, e.clientX), b = Math.max(my0, e.clientY);
         marquee.style.display = 'block'; marquee.style.left = l + 'px'; marquee.style.top = t + 'px'; marquee.style.width = (r - l) + 'px'; marquee.style.height = (b - t) + 'px';
-        hoverBox.style.display = 'none';
+        hideHover();
       }
       return;
     }
-    if (selecting()) { const el = document.elementFromPoint(e.clientX, e.clientY); pickable(el) ? boxTo(hoverBox, el) : (hoverBox.style.display = 'none'); }
+    if (selecting()) { const el = document.elementFromPoint(e.clientX, e.clientY); if (pickable(el)) { boxTo(hoverBox, el); showLabel(el); } else hideHover(); }
   }
   function onPU(e) {
     if (!mDown) return;
@@ -508,12 +553,12 @@
       if (pickable(el)) selectEl(el, mShift);
       else if (!mShift) setSelection([]);    // click empty space clears the selection
     }
-    hoverBox.style.display = 'none';
+    hideHover();
   }
   document.addEventListener('pointerdown', onPD, true);
   document.addEventListener('pointermove', onPM, true);
   document.addEventListener('pointerup', onPU, true);
-  const onScroll = () => { positionSelBoxes(); positionBadges(); if (selecting()) hoverBox.style.display = 'none'; };
+  const onScroll = () => { positionSelBoxes(); positionBadges(); if (selecting()) hideHover(); };
   window.addEventListener('scroll', onScroll, true);
   window.addEventListener('resize', () => { positionSelBoxes(); positionBadges(); if (minimized) { iconX = clamp(iconX, 0, innerWidth - ICON); iconY = clamp(iconY, 0, innerHeight - ICON); layoutCollapsed(); } });
 
