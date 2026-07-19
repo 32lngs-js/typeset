@@ -438,7 +438,21 @@
 
   const inOverlay = e => e.composedPath().includes(hostEl);
   const hasText = el => [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim().length);
-  const pickable = el => el && el !== hostEl && el !== document.documentElement && el !== document.body && !hostEl.contains(el);
+  // agentation-style targeting: only highlight real CONTENT elements. Skip
+  // structural tags, elements without their own text (wrappers), and anything
+  // that spans nearly the whole page — so hovering a container's padding never
+  // washes the whole preview blue.
+  const SKIP_TAGS = new Set(['html', 'body', 'head', 'script', 'style', 'noscript', 'link', 'meta', 'svg', 'path', 'br', 'hr']);
+  function pickable(el) {
+    if (!el || el === hostEl || hostEl.contains(el)) return false;
+    if (el === document.documentElement || el === document.body) return false;
+    if (SKIP_TAGS.has(el.tagName.toLowerCase())) return false;
+    if (!hasText(el)) return false;                              // must carry its own text (not a wrapper)
+    const r = el.getBoundingClientRect();
+    if (r.width === 0 || r.height === 0) return false;
+    if (r.width > window.innerWidth * 0.95 && r.height > window.innerHeight * 0.9) return false;  // not a page-sized wrapper
+    return true;
+  }
 
   // Human-readable element descriptor — ported from agentation's label logic.
   function describeElement(el) {
