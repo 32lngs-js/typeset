@@ -8,6 +8,34 @@ When you tell an agent "make the heading a bit bigger," it picks a number. Maybe
 
 TypeSet is that scrubber. You interact with the live element, in the real page, until the value feels right. Then you copy the CSS and hand it to the agent — or to Agentation, which packages it with the selector and file context so the agent can apply it exactly once, correctly.
 
+## The centroid problem
+
+A base language model is, at its core, a compression of roughly all human text. Not a library — a compression. It stores the shape of patterns, the statistical weight of what humans have written, not the writing itself. When you prompt it, it does not retrieve; it reconstructs. And what it reconstructs trends toward the center of mass of everything it was trained on.
+
+Ted Chiang called this a "blurry JPEG of the web." The mechanism is more precise: language models are trained to predict the most probable next token given context. The most probable output is the mode — the statistical centroid of what humans most often wrote next, given similar context. Slop is the centroid. It reads generic because "most probable next token, averaged over humanity" is definitionally generic.
+
+Every prompt you write is you dragging the output off the mean toward your particular creative vision. Each iteration, you're fighting gravity.
+
+Francis Galton discovered the visual version of this in the 1880s: average many faces through composite photography and you get a face that is technically attractive — symmetrical, proportionate — and entirely without character. AI-generated design has the same property: competent, coherent, unmemorable. What makes a design distinctive is precisely the idiosyncratic choices that depart from the mean. Those choices, by definition, live in low-probability space.
+
+This is where the scrubber model breaks the problem differently. You are not asking the model to navigate from the centroid to your particular creative vision. You navigate there yourself, through direct interaction with the live element. The model never enters the picture until the value is already resolved. What you hand it is not a description of a feeling or a direction to travel — it is a coordinate. Apply this. The centroid problem disappears because you bypassed the generative step entirely.
+
+## Design as a quality signal
+
+The brain does not wait for conscious analysis to evaluate quality. It does it in milliseconds, automatically, using signals accumulated over a lifetime of exposure to well-made and poorly-made things.
+
+Fashion is the clearest example outside of screens. The difference between a cheap garment and an expensive one is rarely one obvious thing. It is the stitching weight, the hem finish, the button placement, how the fabric drapes when it moves, the precision of the cut at the shoulders. You often cannot articulate it. You just know. The brain is reading dozens of micro-signals in parallel, cross-referencing against pattern libraries built from years of handling things. The assessment is done before language can reach it.
+
+The same hardware runs on designed interfaces. When you open a product and something feels considered — the spacing generous in exactly the right proportion, the type weight carrying the right authority for the hierarchy, the line height giving text room to breathe — that impression forms before you read a word. Stanford researchers found that web credibility assessments form within 50ms of first exposure. Trustworthiness judgments take around 100ms. These are pre-linguistic. You are not deciding; your visual system is reporting back.
+
+What it is reading for is intentionality. The signal of quality in a designed artifact is not beauty in the abstract. It is the sense that someone made specific choices — that nothing is there by accident, and nothing is default. Deliberate padding communicates: *this was considered*. A font at weight 450 rather than 400 or 500 is someone who wanted exactly 450, not someone who left the slider at its resting position. Letter-spacing at -0.01em on a heading is a choice that required the designer to have an opinion about -0.01em, which means they had an eye, which means this was made.
+
+Gestalt psychology named the underlying principle: the whole carries information the parts do not. Every micro-decision either reinforces the sense that the whole is intentional or subtly corrodes it. A margin that is two pixels off the grid, a line height that is the default rather than the considered value, a font weight that is whatever the system chose — these do not register individually. They accumulate. The brain does not flag them consciously. It just returns a lower quality score.
+
+This is the structural problem with AI-generated design. Centroid outputs are, by definition, the aggregate of what everyone who has ever designed anything chose when they were not being particularly deliberate. They are the default. The statistically average padding is not wrong — it is exactly what an AI will produce and exactly what no intentional designer would leave unchanged. The brain, encountering a page built from centroid choices, reads it correctly: these are the default values. This was not made; it was generated.
+
+As AI-generated content saturates the environment, these micro-signals will become a more reliable differentiator, not less. The brain learns from exposure. Every page that looks generated trains a faster, more accurate pattern match. The products that feel handmade will feel that way specifically because of the low-probability choices in them — the places where someone scrubbed a value to where their eye said stop, rather than where the model's prior said probably. Those choices are not decorative. They are proof of presence.
+
 ## Who this is for
 
 There used to be a clear path for designers who cared about the details: learn enough CSS to tweak values directly, or open Chrome's inspector, find the element, edit the computed style, and see it update live. It was not elegant but it worked. The designer stayed in control of the value, the browser gave instant feedback, and the result was as precise as their eye.
