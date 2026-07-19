@@ -36,7 +36,7 @@
     #panel {
       --bg:#141414; --bg-hover:rgba(255,255,255,0.06); --border:rgba(255,255,255,0.08);
       --border-sub:rgba(255,255,255,0.06); --text-hi:rgba(255,255,255,0.9);
-      --text-mid:rgba(255,255,255,0.55); --text-lo:rgba(255,255,255,0.18);
+      --text-mid:rgba(255,255,255,0.55); --text-lo:rgba(255,255,255,0.18); --hint-col:rgba(255,255,255,0.66);
       --text-val:rgba(255,255,255,0.6); --chip-bg:rgba(255,255,255,0.07);
       --chip-bdr:rgba(255,255,255,0.06); --chip-hover:rgba(255,255,255,0.12);
       --sel-bg:rgba(255,255,255,0.06); --sel-bdr:rgba(255,255,255,0.1); --sel-col:rgba(255,255,255,0.75);
@@ -51,7 +51,7 @@
       position:fixed; width:260px; background:var(--bg); border-radius:14px;
       box-shadow:0 0 0 0.5px var(--ring),0 16px 48px var(--shadow),0 4px 12px rgba(0,0,0,0.35);
       overflow:hidden; z-index:2147483647; user-select:none; right:20px; top:20px;
-      font-family:'Inter',system-ui,sans-serif;
+      font-family:system-ui,-apple-system,'SF Pro Display',sans-serif;   /* like DialKit */
       transition:width .34s cubic-bezier(.32,.72,0,1),height .34s cubic-bezier(.32,.72,0,1),
         left .34s cubic-bezier(.32,.72,0,1),top .34s cubic-bezier(.32,.72,0,1),
         border-radius .3s cubic-bezier(.32,.72,0,1),background .2s ease,box-shadow .28s ease;
@@ -61,7 +61,7 @@
 
     #panel.panel-light {
       --bg:#fff; --bg-hover:rgba(0,0,0,0.05); --border:rgba(0,0,0,0.08); --border-sub:rgba(0,0,0,0.05);
-      --text-hi:rgba(0,0,0,0.85); --text-mid:rgba(0,0,0,0.5); --text-lo:rgba(0,0,0,0.2); --text-val:rgba(0,0,0,0.55);
+      --text-hi:rgba(0,0,0,0.85); --text-mid:rgba(0,0,0,0.5); --text-lo:rgba(0,0,0,0.2); --text-val:rgba(0,0,0,0.55); --hint-col:rgba(0,0,0,0.6);
       --chip-bg:rgba(0,0,0,0.06); --chip-bdr:rgba(0,0,0,0.06); --chip-hover:rgba(0,0,0,0.1);
       --sel-bg:rgba(0,0,0,0.04); --sel-bdr:rgba(0,0,0,0.1); --sel-col:rgba(0,0,0,0.7);
       --ab-bg:rgba(0,0,0,0.04); --ab-bdr:rgba(0,0,0,0.1); --ab-col:rgba(0,0,0,0.3);
@@ -104,15 +104,18 @@
     .version-add-row { padding:7px 12px; font-size:11px; color:var(--text-lo); cursor:pointer; transition:background .1s,color .1s; }
     .version-add-row:hover { background:var(--bg-hover); color:var(--text-hi); }
 
-    /* change badges — floating over each edited host element (click to re-select) */
-    .ts-badge { position:fixed; transform:translate(-50%,-50%); width:20px; height:20px; border-radius:50%;
-      background:#22c55e; color:#fff; font:700 10px/1 'Inter',sans-serif; display:flex; align-items:center; justify-content:center;
-      pointer-events:auto; cursor:pointer; z-index:2147483646; box-shadow:0 1px 6px rgba(0,0,0,0.22); }
-    .ts-badge:hover { background:#16a34a; }
+    /* change badges — floating over each edited element. blue = single edit,
+       green = group edit (agentation marker convention). Click to re-select. */
+    .ts-badge { position:fixed; transform:translate(-50%,-50%); min-width:20px; height:20px; padding:0 6px; border-radius:999px;
+      color:#fff; font:700 10px/1 system-ui,-apple-system,sans-serif; display:flex; align-items:center; justify-content:center;
+      pointer-events:auto; cursor:pointer; z-index:2147483646; box-shadow:0 1px 6px rgba(0,0,0,0.28); }
+    .ts-badge.single { background:#3c82f7; }
+    .ts-badge.group  { background:#22c55e; }
+    .ts-badge:hover { filter:brightness(1.12); }
 
-    .pb { overflow-y:auto; max-height:calc(100vh - 160px); }
-    .select-hint { font-size:11px; color:var(--text-mid); text-align:center; padding:14px 10px 10px; letter-spacing:0.02em; display:none; }
-    .select-hint.visible { display:block; }
+    .pb { overflow-y:auto; max-height:calc(100vh - 160px); position:relative; }
+    .select-hint { font-size:11px; color:var(--hint-col); text-align:center; letter-spacing:0.02em; display:none; }
+    .select-hint.visible { display:block; position:absolute; left:0; right:0; top:50%; transform:translateY(-50%); padding:0 12px; z-index:5; }
     #controls { transition:opacity .15s; }
     #controls.disabled { opacity:0.22; pointer-events:none; }
 
@@ -163,13 +166,23 @@
     /* host-page highlighters (position:fixed escapes shadow, tracks viewport).
        NOTE: these are siblings of #panel, so #panel's --accent is out of scope —
        use literal colors here. */
-    .ts-box { position:fixed; pointer-events:none; z-index:2147483646; border-radius:2px; display:none; }
-    #hoverBox { border:1.5px dashed rgba(0,102,255,0.7); background:rgba(0,102,255,0.06); }
-    #selBox { border:2px solid #0066ff; box-shadow:0 0 0 1px rgba(0,102,255,0.25); }
+    .ts-box { position:fixed; pointer-events:none; z-index:2147483646; border-radius:4px; display:none; }
+    #hoverBox { border:2px solid rgba(60,130,247,0.45); background:rgba(60,130,247,0.05); }
+    /* dragging a marquee is always a multi-select -> green (agentation) */
+    #marquee { border:1.5px dashed rgba(34,197,94,0.7); background:rgba(34,197,94,0.08); }
+    /* one outline per selected element — LIGHT semi-transparent border + faint
+       fill, matching agentation (border = accent/green ~55%, fill ~5%, no halo). */
+    .ts-selbox { position:fixed; pointer-events:none; z-index:2147483646; border-radius:4px;
+      border:2px solid rgba(60,130,247,0.55); background:rgba(60,130,247,0.05); }
+    .ts-selbox.group { border-color:rgba(34,197,94,0.6); background:rgba(34,197,94,0.06); }
+    /* dark pill descriptor label (agentation hover tooltip) */
+    .ts-label { position:fixed; display:none; z-index:2147483647; pointer-events:none;
+      font:500 11px/1.3 system-ui,-apple-system,sans-serif; color:#fff; background:rgba(0,0,0,0.85);
+      padding:4px 8px; border-radius:6px; max-width:340px; white-space:nowrap; overflow:hidden;
+      text-overflow:ellipsis; box-shadow:0 2px 10px rgba(0,0,0,0.35); }
   `;
 
-  const CROSS = '<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1v11M1 6.5h11" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="6.5" cy="6.5" r="2.4" stroke="currentColor" stroke-width="1.2"/></svg>';
-  const COPY = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="4" y="4" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.1"/><path d="M3 8H2a1 1 0 01-1-1V2a1 1 0 011-1h5a1 1 0 011 1v1" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>';
+  const COPY ='<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="4" y="4" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.1"/><path d="M3 8H2a1 1 0 01-1-1V2a1 1 0 011-1h5a1 1 0 011 1v1" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>';
   const THEME = '<svg width="11" height="11" viewBox="0 0 11 11" fill="none"><circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" stroke-width="1"/><path d="M5.5 1 A4.5 4.5 0 0 0 5.5 10 Z" fill="currentColor"/></svg>';
   const MINI = '<svg width="10" height="2" viewBox="0 0 10 2" fill="none"><rect width="10" height="1.5" rx="0.75" fill="currentColor"/></svg>';
   const CHEV = '<svg class="chev" width="8" height="5" viewBox="0 0 8 5" fill="none"><path d="M1 1l3 3 3-3" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -192,14 +205,13 @@
               <button class="version-btn" id="versionBtn"><span id="versionLabel">V1</span>${CHEV}</button>
               <div class="version-menu" id="versionMenu"></div>
             </div>
-            <button class="icon-btn pick-btn active" id="pickBtn" title="Pick an element">${CROSS}</button>
             <button class="copy-btn" id="copyBtn" title="Copy CSS">${COPY}</button>
             <button class="icon-btn" id="themeBtn" title="Toggle theme">${THEME}</button>
             <button class="icon-btn" id="minBtn" title="Minimize">${MINI}</button>
           </div>
         </div>
         <div class="pb" id="panelBody">
-          <div class="select-hint visible" id="selectHint">Click any text on the page</div>
+          <div class="select-hint visible" id="selectHint">Click, shift-click, or drag to select</div>
           <div id="controls" class="disabled">
             <div class="section-head"><span>Typography</span></div>
             ${slider('fontSize','Size',8,120,0.5,'—')}
@@ -209,6 +221,8 @@
             <div class="section-head"><span>Position</span></div>
             ${slider('translateX','X',-400,400,1,'0px')}
             ${slider('translateY','Y',-400,400,1,'0px')}
+            <div class="section-head"><span>Layout</span></div>
+            ${slider('maxWidth','Width',40,1600,1,'—')}
             <div class="section-head"><span>Family</span></div>
             <div class="font-picker" id="fontPicker">
               <button class="font-trigger" id="fontTrigger" type="button">
@@ -228,7 +242,8 @@
       </div>
     </div>
     <div class="ts-box" id="hoverBox"></div>
-    <div class="ts-box" id="selBox"></div>`;
+    <div class="ts-box" id="marquee"></div>
+    <div class="ts-label" id="hoverLabel"></div>`;
 
   // ── Mount in an isolated Shadow DOM ──
   const hostEl = document.createElement('div');
@@ -242,29 +257,32 @@
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
   const panel = $('panel'), panelInner = panel.querySelector('.panel-inner');
   const selectHint = $('selectHint'), controls = $('controls');
-  const copyBtn = $('copyBtn'), resetBtn = $('resetBtn'), themeBtn = $('themeBtn'), minBtn = $('minBtn'), pickBtn = $('pickBtn');
-  const hoverBox = $('hoverBox'), selBox = $('selBox');
+  const copyBtn = $('copyBtn'), resetBtn = $('resetBtn'), themeBtn = $('themeBtn'), minBtn = $('minBtn');
+  const hoverBox = $('hoverBox'), marquee = $('marquee'), hoverLabel = $('hoverLabel'), phTitle = panel.querySelector('.ph-title');
   const fontPicker = $('fontPicker'), fontTrigger = $('fontTrigger'), fontTriggerName = $('fontTriggerName'), fontList = $('fontList');
 
   let active = null, txX = 0, txY = 0;
+  let selection = [];             // all currently-selected host elements (active = the primary/last)
   const edited = new Set();       // host elements TypeSet has changed (for Copy CSS)
 
   // ── Undo (stores live node refs — safe, no reload during a session) ──
   const undoStack = [];
-  function snap() {
-    if (!active) return null;
-    const s = active.style;
-    return { el: active, fontSize: s.fontSize, fontWeight: s.fontWeight, lineHeight: s.lineHeight,
-             letterSpacing: s.letterSpacing, fontFamily: s.fontFamily, textAlign: s.textAlign, transform: s.transform, txX, txY };
+  // Each undo entry is a snapshot of EVERY selected element (multi-select safe).
+  function snapOne(el) {
+    const s = el.style;
+    return { el, fontSize: s.fontSize, fontWeight: s.fontWeight, lineHeight: s.lineHeight,
+             letterSpacing: s.letterSpacing, fontFamily: s.fontFamily, textAlign: s.textAlign, transform: s.transform, maxWidth: s.maxWidth };
   }
-  function pushUndo() { const s = snap(); if (s) undoStack.push(s); }
+  function pushUndo() { if (selection.length) undoStack.push(selection.map(snapOne)); }
   function popUndo() {
-    const s = undoStack.pop(); if (!s) return;
-    const el = s.el;
-    el.style.fontSize = s.fontSize; el.style.fontWeight = s.fontWeight; el.style.lineHeight = s.lineHeight;
-    el.style.letterSpacing = s.letterSpacing; el.style.fontFamily = s.fontFamily; el.style.textAlign = s.textAlign; el.style.transform = s.transform;
-    if (active === el) { txX = s.txX; txY = s.txY; syncFrom(el); }
-    saveCurrentVersion(); positionSelBox();
+    const entry = undoStack.pop(); if (!entry) return;
+    entry.forEach(s => {
+      const st = s.el.style;
+      st.fontSize = s.fontSize; st.fontWeight = s.fontWeight; st.lineHeight = s.lineHeight;
+      st.letterSpacing = s.letterSpacing; st.fontFamily = s.fontFamily; st.textAlign = s.textAlign; st.transform = s.transform; st.maxWidth = s.maxWidth;
+    });
+    if (active) { const m = new DOMMatrix(getComputedStyle(active).transform); txX = Math.round(m.m41); txY = Math.round(m.m42); syncFrom(active); }
+    saveCurrentVersion(); updateSelBoxes();
   }
 
   // ── Versions + change badges (keyed on live element refs, not data-id) ──
@@ -272,7 +290,7 @@
   let currentVersionIdx = 0;
   const badgeNodes = [];  // {el, node}
 
-  const emptySnap = el => ({ el, fontSize: '', fontWeight: '', lineHeight: '', letterSpacing: '', fontFamily: '', textAlign: '', transform: '' });
+  const emptySnap = el => ({ el, fontSize: '', fontWeight: '', lineHeight: '', letterSpacing: '', fontFamily: '', textAlign: '', transform: '', maxWidth: '' });
   // As new elements are touched, backfill every existing version with an empty
   // snapshot so switching to an OLDER version correctly clears them.
   function trackEdited(el) {
@@ -282,17 +300,17 @@
   }
   function captureAllStyles() {
     return [...edited].map(el => ({ el, fontSize: el.style.fontSize, fontWeight: el.style.fontWeight, lineHeight: el.style.lineHeight,
-      letterSpacing: el.style.letterSpacing, fontFamily: el.style.fontFamily, textAlign: el.style.textAlign, transform: el.style.transform }));
+      letterSpacing: el.style.letterSpacing, fontFamily: el.style.fontFamily, textAlign: el.style.textAlign, transform: el.style.transform, maxWidth: el.style.maxWidth }));
   }
   function applyAllStyles(arr) {
     arr.forEach(o => { const s = o.el.style; s.fontSize = o.fontSize; s.fontWeight = o.fontWeight; s.lineHeight = o.lineHeight;
-      s.letterSpacing = o.letterSpacing; s.fontFamily = o.fontFamily; s.textAlign = o.textAlign; s.transform = o.transform; });
+      s.letterSpacing = o.letterSpacing; s.fontFamily = o.fontFamily; s.textAlign = o.textAlign; s.transform = o.transform; s.maxWidth = o.maxWidth; });
   }
   function saveCurrentVersion() { versions[currentVersionIdx].styles = captureAllStyles(); updateBadges(); }
   function switchVersion(idx) {
     saveCurrentVersion(); currentVersionIdx = idx; applyAllStyles(versions[idx].styles); updateBadges();
     txX = 0; txY = 0;
-    if (active) { const m = new DOMMatrix(getComputedStyle(active).transform); txX = Math.round(m.m41); txY = Math.round(m.m42); syncFrom(active); positionSelBox(); }
+    if (active) { const m = new DOMMatrix(getComputedStyle(active).transform); txX = Math.round(m.m41); txY = Math.round(m.m42); syncFrom(active); updateSelBoxes(); }
     renderVersionMenu();
   }
   function addVersion() {
@@ -311,16 +329,22 @@
   $('versionBtn').addEventListener('click', e => { e.stopPropagation(); $('versionMenu').classList.toggle('open'); });
   root.addEventListener('click', e => { if (!e.target.closest('#versionWrap')) closeVersionMenu(); });
 
-  const isChanged = el => { const s = el.style; return !!(s.fontFamily || s.fontSize || s.fontWeight || s.lineHeight || s.letterSpacing || s.textAlign || (s.transform && s.transform !== 'none')); };
+  const isChanged = el => { const s = el.style; return !!(s.fontFamily || s.fontSize || s.fontWeight || s.lineHeight || s.letterSpacing || s.textAlign || s.maxWidth || (s.transform && s.transform !== 'none')); };
   function updateBadges() {
     badgeNodes.forEach(b => b.node.remove()); badgeNodes.length = 0;
-    let i = 0;
+    if (minimized) return;                 // badges only show while the tool is open
     edited.forEach(el => {
       if (!isChanged(el)) return;
-      i++;
+      const m = el.__tsMark, group = !!(m && m.group);
       const node = document.createElement('div');
-      node.className = 'ts-badge'; node.textContent = i; node.title = 'Edited — click to select';
-      node.addEventListener('click', e => { e.stopPropagation(); e.preventDefault(); setPicking(false); selectEl(el); });
+      node.className = 'ts-badge ' + (group ? 'group' : 'single');
+      node.textContent = m && m.num != null ? m.num : '•';
+      node.title = (group ? 'Group edit' : 'Single edit') + ' — click to select';
+      node.addEventListener('click', e => {
+        e.stopPropagation(); e.preventDefault();
+        if (group && m.els.length) setSelection(m.els.filter(x => document.contains(x)));
+        else selectEl(el);
+      });
       root.appendChild(node); badgeNodes.push({ el, node });
     });
     positionBadges();
@@ -351,6 +375,8 @@
     panel.classList.remove('minimized');
     panel.style.width = PANEL_W + 'px'; panel.style.height = targetH + 'px'; panel.style.borderRadius = '14px';
     layoutExpanded(); minimized = false;
+    document.body && (document.body.style.cursor = 'crosshair');   // select mode on
+    updateBadges();
   }
   function collapse() {
     if (minimized) return;
@@ -360,6 +386,8 @@
     panel.classList.add('minimized');
     panel.style.width = ICON + 'px'; panel.style.height = ICON + 'px'; panel.style.borderRadius = '50%';
     layoutCollapsed(); minimized = true;
+    document.body && (document.body.style.cursor = '');   // release the page
+    hideHover(); marquee.style.display = 'none'; updateBadges();
   }
 
   const DRAG_EXCLUDE = '.icon-btn,.copy-btn,.pick-btn,.ts-slider,.font-picker,.align-btn,.reset-btn,input';
@@ -388,49 +416,164 @@
   themeBtn.addEventListener('click', e => { e.stopPropagation(); panel.classList.toggle('panel-light'); });
 
   // ── Element picking on the host page ──
-  let picking = false;
-  function setPicking(on) {
-    picking = on;
-    pickBtn.classList.toggle('active', on);
-    hoverBox.style.display = 'none';
-    document.body && (document.body.style.cursor = on ? 'crosshair' : '');
-  }
+  // Select-mode is active whenever the panel is EXPANDED. Minimizing to the dial
+  // releases the page (clicks pass through) — the minimize button is the on/off.
+  const selecting = () => !minimized;
   function boxTo(box, el) {
     if (!el) { box.style.display = 'none'; return; }
     const r = el.getBoundingClientRect();
     box.style.display = 'block'; box.style.left = r.left + 'px'; box.style.top = r.top + 'px';
     box.style.width = r.width + 'px'; box.style.height = r.height + 'px';
   }
-  const positionSelBox = () => { if (active) boxTo(selBox, active); else selBox.style.display = 'none'; };
+
+  // One outline per selected element — blue for a single, green for a group.
+  const selBoxes = [];  // {el, node}
+  function updateSelBoxes() {
+    while (selBoxes.length < selection.length) { const n = document.createElement('div'); n.className = 'ts-selbox'; root.appendChild(n); selBoxes.push({ el: null, node: n }); }
+    while (selBoxes.length > selection.length) { selBoxes.pop().node.remove(); }
+    const group = selection.length > 1;
+    selection.forEach((el, i) => { selBoxes[i].el = el; selBoxes[i].node.classList.toggle('group', group); boxTo(selBoxes[i].node, el); });
+  }
+  function positionSelBoxes() { selBoxes.forEach(b => { if (b.el) boxTo(b.node, b.el); }); }
 
   const inOverlay = e => e.composedPath().includes(hostEl);
-  function onMove(e) {
-    if (!picking) return;
-    const el = document.elementFromPoint(e.clientX, e.clientY);
-    if (!el || el === hostEl || el === document.documentElement || el === document.body) { hoverBox.style.display = 'none'; return; }
-    boxTo(hoverBox, el);
+  const hasText = el => [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim().length);
+  // agentation-style targeting: only highlight real CONTENT elements. Skip
+  // structural tags, elements without their own text (wrappers), and anything
+  // that spans nearly the whole page — so hovering a container's padding never
+  // washes the whole preview blue.
+  const SKIP_TAGS = new Set(['html', 'body', 'head', 'script', 'style', 'noscript', 'link', 'meta', 'svg', 'path', 'br', 'hr']);
+  function pickable(el) {
+    if (!el || el === hostEl || hostEl.contains(el)) return false;
+    if (el === document.documentElement || el === document.body) return false;
+    if (SKIP_TAGS.has(el.tagName.toLowerCase())) return false;
+    if (!hasText(el)) return false;                              // must carry its own text (not a wrapper)
+    const r = el.getBoundingClientRect();
+    if (r.width === 0 || r.height === 0) return false;
+    if (r.width > window.innerWidth * 0.95 && r.height > window.innerHeight * 0.9) return false;  // not a page-sized wrapper
+    return true;
   }
-  function onPick(e) {
-    if (!picking || inOverlay(e)) return;
+
+  // Human-readable element descriptor — ported from agentation's label logic.
+  function describeElement(el) {
+    const tag = el.tagName.toLowerCase();
+    const text = (el.textContent || '').trim();
+    if (/^h[1-6]$/.test(tag)) return text ? `${tag} "${text.slice(0, 35)}"` : tag;
+    if (tag === 'p') return text ? `paragraph: "${text.slice(0, 40)}${text.length > 40 ? '...' : ''}"` : 'paragraph';
+    if (tag === 'span' || tag === 'label') return (text && text.length < 40) ? `"${text}"` : tag;
+    if (tag === 'li') return (text && text.length < 40) ? `list item: "${text.slice(0, 35)}"` : 'list item';
+    if (tag === 'a') return text ? `link: "${text.slice(0, 35)}"` : 'link';
+    if (tag === 'button') return text ? `button "${text.slice(0, 30)}"` : 'button';
+    if (tag === 'blockquote') return 'blockquote';
+    if (tag === 'code') return (text && text.length < 30) ? `code: \`${text}\`` : 'code';
+    if (tag === 'pre') return 'code block';
+    if (tag === 'img') { const alt = el.getAttribute('alt'); return alt ? `image "${alt.slice(0, 30)}"` : 'image'; }
+    if (['div', 'section', 'article', 'nav', 'header', 'footer', 'aside', 'main'].includes(tag)) {
+      const aria = el.getAttribute('aria-label'); if (aria) return `${tag} [${aria}]`;
+      const role = el.getAttribute('role'); if (role) return role;
+      const cls = typeof el.className === 'string' ? el.className.trim() : '';
+      if (cls) return cls.split(/[\s_-]+/).filter(Boolean).slice(0, 2).join(' ');   // e.g. "flex flex-col" -> "flex flex"
+      return tag;
+    }
+    return text ? `${tag} "${text.slice(0, 30)}"` : tag;
+  }
+  function showLabel(el) {
+    hoverLabel.textContent = describeElement(el);
+    hoverLabel.style.display = 'block';
+    const r = el.getBoundingClientRect();
+    const lw = hoverLabel.offsetWidth, lh = hoverLabel.offsetHeight;
+    let left = clamp(r.left + r.width / 2 - lw / 2, 4, window.innerWidth - lw - 4);
+    let top = r.top - lh - 6;
+    if (top < 4) top = r.top + 6;   // no room above -> tuck just inside the top
+    hoverLabel.style.left = left + 'px'; hoverLabel.style.top = top + 'px';
+  }
+  const hideHover = () => { hoverBox.style.display = 'none'; hoverLabel.style.display = 'none'; };
+
+  // ── Marks: each edit gets a number; single = blue, group = green (agentation) ──
+  let markCounter = 0, currentMark = null;
+  function markForSelection() {
+    if (selection.length) {                 // reuse if this exact set already forms a mark
+      const m = selection[0].__tsMark;
+      if (m && m.num != null && m.els.length === selection.length && selection.every(e => e.__tsMark === m)) return m;
+    }
+    return { num: null, group: selection.length > 1, els: selection.slice() };
+  }
+  function commitMark() {                    // called when an edit actually changes the selection
+    if (!currentMark || !selection.length) return;
+    if (currentMark.num == null) currentMark.num = ++markCounter;
+    currentMark.group = selection.length > 1;
+    currentMark.els = selection.slice();
+    selection.forEach(el => el.__tsMark = currentMark);
+  }
+
+  function updateHint() {
+    phTitle.textContent = selection.length > 1 ? `TypeSet · ${selection.length}` : 'TypeSet';
+    if (selection.length) { selectHint.classList.remove('visible'); controls.classList.remove('disabled'); }
+    else { selectHint.classList.add('visible'); controls.classList.add('disabled'); }
+  }
+  function setSelection(els) {
+    selection = els.slice();
+    active = selection[selection.length - 1] || null;
+    if (active) { const m = new DOMMatrix(getComputedStyle(active).transform); txX = Math.round(m.m41); txY = Math.round(m.m42); syncFrom(active); }
+    currentMark = markForSelection();
+    updateHint(); updateSelBoxes(); resyncHeight();
+  }
+  // additive = shift held: toggle this element in/out of the current selection
+  function selectEl(el, additive) {
+    if (additive) { const i = selection.indexOf(el); if (i >= 0) selection.splice(i, 1); else selection.push(el); setSelection(selection); }
+    else setSelection([el]);
+  }
+  function elementsInRect(l, t, r, b) {
+    const hits = [];
+    document.body.querySelectorAll('*').forEach(el => {
+      if (hostEl.contains(el) || !hasText(el)) return;
+      const rc = el.getBoundingClientRect();
+      if (rc.width === 0 || rc.height === 0) return;
+      if (rc.left < r && rc.right > l && rc.top < b && rc.bottom > t) hits.push(el);   // AABB overlap (agentation-style)
+    });
+    return hits;
+  }
+
+  // While expanded: a click (no drag) selects one (shift-click toggles into a
+  // group); a drag draws a marquee and selects every text element it overlaps.
+  let mDown = false, mMoved = false, mx0 = 0, my0 = 0, mShift = false;
+  function onPD(e) {
+    if (inOverlay(e) || !selecting()) return;
     e.preventDefault(); e.stopPropagation();
-    selectEl(e.target);
-    setPicking(false);
+    mDown = true; mMoved = false; mx0 = e.clientX; my0 = e.clientY; mShift = e.shiftKey;
   }
-  function selectEl(el) {
-    active = el;
-    const mat = new DOMMatrix(getComputedStyle(el).transform);
-    txX = Math.round(mat.m41); txY = Math.round(mat.m42);
-    syncFrom(el);
-    selectHint.classList.remove('visible'); controls.classList.remove('disabled');
-    resyncHeight(); positionSelBox();
+  function onPM(e) {
+    if (mDown) {
+      if (!mMoved && Math.hypot(e.clientX - mx0, e.clientY - my0) > 6) mMoved = true;
+      if (mMoved) {
+        const l = Math.min(mx0, e.clientX), t = Math.min(my0, e.clientY), r = Math.max(mx0, e.clientX), b = Math.max(my0, e.clientY);
+        marquee.style.display = 'block'; marquee.style.left = l + 'px'; marquee.style.top = t + 'px'; marquee.style.width = (r - l) + 'px'; marquee.style.height = (b - t) + 'px';
+        hideHover();
+      }
+      return;
+    }
+    if (selecting()) { const el = document.elementFromPoint(e.clientX, e.clientY); if (pickable(el)) { boxTo(hoverBox, el); showLabel(el); } else hideHover(); }
   }
-  document.addEventListener('pointermove', onMove, true);
-  document.addEventListener('click', onPick, true);
-  document.addEventListener('pointerdown', e => { if (picking && !inOverlay(e)) { e.preventDefault(); e.stopPropagation(); } }, true);
-  pickBtn.addEventListener('click', e => { e.stopPropagation(); setPicking(!picking); });
-  const onScroll = () => { positionSelBox(); positionBadges(); if (picking) hoverBox.style.display = 'none'; };
+  function onPU(e) {
+    if (!mDown) return;
+    mDown = false; marquee.style.display = 'none';
+    if (mMoved) {
+      const l = Math.min(mx0, e.clientX), t = Math.min(my0, e.clientY), r = Math.max(mx0, e.clientX), b = Math.max(my0, e.clientY);
+      const hits = elementsInRect(l, t, r, b);
+      if (hits.length) setSelection(mShift ? [...new Set([...selection, ...hits])] : hits);
+    } else {
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      if (pickable(el)) selectEl(el, mShift);
+      else if (!mShift) setSelection([]);    // click empty space clears the selection
+    }
+    hideHover();
+  }
+  document.addEventListener('pointerdown', onPD, true);
+  document.addEventListener('pointermove', onPM, true);
+  document.addEventListener('pointerup', onPU, true);
+  const onScroll = () => { positionSelBoxes(); positionBadges(); if (selecting()) hideHover(); };
   window.addEventListener('scroll', onScroll, true);
-  window.addEventListener('resize', () => { positionSelBox(); positionBadges(); if (minimized) { iconX = clamp(iconX, 0, innerWidth - ICON); iconY = clamp(iconY, 0, innerHeight - ICON); layoutCollapsed(); } });
+  window.addEventListener('resize', () => { positionSelBoxes(); positionBadges(); if (minimized) { iconX = clamp(iconX, 0, innerWidth - ICON); iconY = clamp(iconY, 0, innerHeight - ICON); layoutCollapsed(); } });
 
   // ── Fonts ──
   const FONTS = [
@@ -461,7 +604,7 @@
     }).join('');
     fontList.querySelectorAll('.font-item').forEach(item => item.addEventListener('click', () => {
       const val = item.dataset.value;
-      if (active) { pushUndo(); active.style.fontFamily = val; trackEdited(active); saveCurrentVersion(); setFontUI(val); positionSelBox(); }
+      if (selection.length) { pushUndo(); selection.forEach(el => { el.style.fontFamily = val; trackEdited(el); }); commitMark(); saveCurrentVersion(); setFontUI(val); updateSelBoxes(); }
       closeFontList();
     }));
   }
@@ -503,7 +646,7 @@
     if (prop === 'fontWeight') return Math.round(v);
     if (prop === 'lineHeight') return (+v).toFixed(2);
     if (prop === 'letterSpacing') return (+v).toFixed(3) + 'em';
-    return Math.round(v) + 'px';
+    return Math.round(v) + 'px';   // fontSize / translateX / translateY / maxWidth
   }
   const vEl = prop => root.querySelector(`.ts-slider-value[data-v="${prop}"]`);
   function syncFrom(el) {
@@ -512,15 +655,18 @@
     const lsPx = cs.letterSpacing === 'normal' ? 0 : parseFloat(cs.letterSpacing);
     const ls = Math.round((lsPx / fsz) * 1000) / 1000;
     const mat = new DOMMatrix(cs.transform); txX = Math.round(mat.m41); txY = Math.round(mat.m42);
+    const wid = cs.maxWidth === 'none' ? Math.round(parseFloat(cs.width)) : Math.round(parseFloat(cs.maxWidth));
     vEl('fontSize').textContent = Math.round(fsz) + 'px';
     vEl('fontWeight').textContent = parseInt(cs.fontWeight) || 400;
     vEl('lineHeight').textContent = lh.toFixed(2);
     vEl('letterSpacing').textContent = ls.toFixed(3) + 'em';
     vEl('translateX').textContent = txX + 'px';
     vEl('translateY').textContent = txY + 'px';
+    vEl('maxWidth').textContent = wid + 'px';
     updateRowTrack('fontSize', fsz); updateRowTrack('fontWeight', parseInt(cs.fontWeight) || 400);
     updateRowTrack('lineHeight', lh); updateRowTrack('letterSpacing', ls);
     updateRowTrack('translateX', txX); updateRowTrack('translateY', txY);
+    updateRowTrack('maxWidth', wid);
     setFontUI(cs.fontFamily);
     root.querySelectorAll('.align-btn').forEach(b => b.classList.toggle('active', b.dataset.align === cs.textAlign));
   }
@@ -533,18 +679,25 @@
     if (prop === 'letterSpacing') return Math.round(((cs.letterSpacing === 'normal' ? 0 : parseFloat(cs.letterSpacing)) / fsz) * 1000) / 1000;
     if (prop === 'translateX') return txX;
     if (prop === 'translateY') return txY;
+    if (prop === 'maxWidth') return cs.maxWidth === 'none' ? Math.round(parseFloat(cs.width)) : Math.round(parseFloat(cs.maxWidth));
     return 0;
   }
   function applyProp(prop, val) {
-    if (!active) return;
-    if (prop === 'fontSize') active.style.fontSize = val + 'px';
-    if (prop === 'fontWeight') active.style.fontWeight = val;
-    if (prop === 'lineHeight') active.style.lineHeight = val;
-    if (prop === 'letterSpacing') active.style.letterSpacing = val + 'em';
-    if (prop === 'translateX') { txX = val; active.style.transform = `translate(${txX}px,${txY}px)`; }
-    if (prop === 'translateY') { txY = val; active.style.transform = `translate(${txX}px,${txY}px)`; }
-    trackEdited(active);
-    updateRowTrack(prop, val); saveCurrentVersion(); positionSelBox();
+    if (!selection.length) return;
+    if (prop === 'translateX') txX = val;
+    if (prop === 'translateY') txY = val;
+    selection.forEach(el => {
+      const s = el.style;
+      if (prop === 'fontSize') s.fontSize = val + 'px';
+      else if (prop === 'fontWeight') s.fontWeight = val;
+      else if (prop === 'lineHeight') s.lineHeight = val;
+      else if (prop === 'letterSpacing') s.letterSpacing = val + 'em';
+      else if (prop === 'maxWidth') s.maxWidth = val + 'px';
+      else if (prop === 'translateX' || prop === 'translateY') s.transform = `translate(${txX}px,${txY}px)`;
+      trackEdited(el);
+    });
+    commitMark();
+    updateRowTrack(prop, val); saveCurrentVersion(); updateSelBoxes();
   }
 
   // ── Sliders ──
@@ -599,12 +752,13 @@
   root.querySelectorAll('.align-btn').forEach(btn => btn.addEventListener('click', () => {
     root.querySelectorAll('.align-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    if (active) { pushUndo(); active.style.textAlign = btn.dataset.align; trackEdited(active); saveCurrentVersion(); positionSelBox(); }
+    if (selection.length) { pushUndo(); selection.forEach(el => { el.style.textAlign = btn.dataset.align; trackEdited(el); }); commitMark(); saveCurrentVersion(); updateSelBoxes(); }
   }));
   resetBtn.addEventListener('click', () => {
-    if (!active) return; pushUndo();
-    ['fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'fontFamily', 'textAlign', 'transform'].forEach(p => active.style[p] = '');
-    txX = 0; txY = 0; syncFrom(active); saveCurrentVersion(); positionSelBox();
+    if (!selection.length) return; pushUndo();
+    const props = ['fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'fontFamily', 'textAlign', 'transform', 'maxWidth'];
+    selection.forEach(el => { props.forEach(p => el.style[p] = ''); el.__tsMark = null; });
+    txX = 0; txY = 0; if (active) syncFrom(active); saveCurrentVersion(); updateSelBoxes();
   });
 
   // ── Copy CSS as selector blocks ──
@@ -629,6 +783,7 @@
         s.lineHeight && `line-height: ${s.lineHeight};`,
         s.letterSpacing && `letter-spacing: ${s.letterSpacing};`,
         s.textAlign && `text-align: ${s.textAlign};`,
+        s.maxWidth && `max-width: ${s.maxWidth};`,
         s.transform && s.transform !== 'none' && `transform: ${s.transform};`,
       ].filter(Boolean);
       if (lines.length) blocks.push(`${cssSelector(el)} {\n  ${lines.join('\n  ')}\n}`);
@@ -642,7 +797,7 @@
 
   // ── Keyboard ──
   function onKey(e) {
-    if (e.key === 'Escape' && picking) { setPicking(false); return; }
+    if (e.key === 'Escape' && selection.length) { setSelection([]); return; }
     if (!e.metaKey && !e.ctrlKey) return;
     if (e.key === 'z' && !e.shiftKey) { e.preventDefault(); popUndo(); }
     else if (e.key === 'c' && active && !window.getSelection().toString()) { e.preventDefault(); triggerCopy(); }
@@ -659,14 +814,15 @@
     iconX = window.innerWidth - ICON - 20; iconY = 20;
     panel.offsetHeight; panel.style.transition = '';
     renderVersionMenu();
-    setPicking(true);
+    document.body && (document.body.style.cursor = 'crosshair');   // expanded == select mode
   })();
 
   // ── Teardown (re-run script to toggle off) ──
   window.__typesetOverlay = {
     destroy() {
-      document.removeEventListener('pointermove', onMove, true);
-      document.removeEventListener('click', onPick, true);
+      document.removeEventListener('pointerdown', onPD, true);
+      document.removeEventListener('pointermove', onPM, true);
+      document.removeEventListener('pointerup', onPU, true);
       document.removeEventListener('keydown', onKey, true);
       window.removeEventListener('scroll', onScroll, true);
       if (document.body) document.body.style.cursor = '';

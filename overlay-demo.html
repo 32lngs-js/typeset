@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TypeSet Overlay — Demo</title>
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Georgia, 'Times New Roman', serif; color: #1a1a1a; background: #fbfbf9; line-height: 1.6; }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 72px 32px 120px; }
+    .eyebrow { font-family: system-ui, sans-serif; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: #b06a2c; font-weight: 700; margin-bottom: 14px; }
+    h1 { font-size: 46px; line-height: 1.05; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.01em; }
+    h2.tag { font-family: system-ui, sans-serif; font-size: 21px; font-weight: 400; color: #666; margin: 0 0 32px; }
+    p { font-size: 17px; margin: 0 0 20px; }
+    h3 { font-family: system-ui, sans-serif; font-size: 15px; letter-spacing: 0.02em; text-transform: uppercase; color: #999; font-weight: 600; margin: 40px 0 12px; }
+    ul { padding-left: 22px; margin: 0 0 20px; }
+    li { font-size: 17px; margin-bottom: 8px; }
+    .cta { display: inline-block; margin-top: 16px; font-family: system-ui, sans-serif; font-size: 16px; font-weight: 600; background: #1a1a1a; color: #fff; padding: 12px 22px; border-radius: 8px; text-decoration: none; }
+    .note { font-family: system-ui, sans-serif; font-size: 13px; color: #999; margin-top: 64px; padding-top: 20px; border-top: 1px solid #eee; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="eyebrow">Case study</div>
+    <h1>Typography is the interface</h1>
+    <h2 class="tag">Most of a product's voice lives in its type. This page is here so you can scrub it.</h2>
+
+    <p>This is a sample host page. Open the TypeSet overlay (it loads automatically here), then click any text element to inspect and edit its live typography — size, weight, line height, letter spacing, width, and family.</p>
+
+    <p>Try the new bits: <strong>shift-click</strong> several elements to select them at once, or <strong>drag a rectangle</strong> across a region to marquee-select. Then scrub a slider and watch every selected element change together. Hit <strong>Copy CSS</strong> and you get one selector block per element.</p>
+
+    <h3>What you can change</h3>
+    <ul>
+      <li>Size, weight, line height, and letter spacing</li>
+      <li>Column width (measure) via the Layout slider</li>
+      <li>Font family, previewed in each face</li>
+      <li>Alignment and X / Y position</li>
+    </ul>
+
+    <p>Everything you do is a live inline style, so it resets on reload. The Copy button is how you take the values back to your real stylesheet.</p>
+
+    <a class="cta" href="#">Get started</a>
+
+    <div class="note">TypeSet overlay demo. The panel top-right is the tool, not part of this page.</div>
+  </div>
+
+  <!-- auto-load the overlay so this page shows it live -->
+  <script src="typeset-overlay.js"></script>
+</body>
+</html>
