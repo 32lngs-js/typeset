@@ -107,8 +107,9 @@ const httpServer = createServer((req, res) => {
 
 httpServer.on("error", (err) => {
   if (err.code === "EADDRINUSE") {
-    process.stderr.write(`TypeSet MCP: port ${PORT} already in use. Set TYPESET_PORT to use a different port.\n`);
-    process.exit(1);
+    process.stderr.write(`TypeSet MCP: port ${PORT} already in use — HTTP endpoint disabled. Set TYPESET_PORT to use a different port. MCP tools are still available.\n`);
+    // Don't exit — keep the MCP stdio transport alive so tools are accessible.
+    return;
   }
   throw err;
 });
