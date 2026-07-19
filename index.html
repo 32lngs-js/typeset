@@ -69,19 +69,44 @@
       --dial-bg:    #141414;
       --dial-icon:  rgba(255,255,255,0.85);
 
+      /* dialkit-derived slider tokens */
+      --sl-track:      rgba(255,255,255,0.05);
+      --sl-fill:       rgba(255,255,255,0.11);
+      --sl-fill-act:   rgba(255,255,255,0.16);
+      --sl-hash:       rgba(255,255,255,0.15);
+      --sl-handle:     rgba(255,255,255,0.95);
+      --radius:        8px;
+
       position: fixed;
       width: 260px;
       background: var(--bg);
       border-radius: 14px;
       box-shadow: 0 0 0 0.5px var(--ring), 0 16px 48px var(--shadow), 0 4px 12px rgba(0,0,0,0.35);
-      overflow: visible;
+      overflow: hidden;
       z-index: 9999;
       user-select: none;
       right: 20px;
       top: 80px;
-      transition: width 0.22s cubic-bezier(0.4,0,0.2,1), height 0.22s cubic-bezier(0.4,0,0.2,1), border-radius 0.22s cubic-bezier(0.4,0,0.2,1), background 0.18s ease, box-shadow 0.22s ease;
+      /* dialkit-style morph: geometry + radius animate on expand/collapse (disabled while dragging) */
+      transition:
+        width 0.34s cubic-bezier(0.32,0.72,0,1),
+        height 0.34s cubic-bezier(0.32,0.72,0,1),
+        left 0.34s cubic-bezier(0.32,0.72,0,1),
+        top 0.34s cubic-bezier(0.32,0.72,0,1),
+        border-radius 0.3s cubic-bezier(0.32,0.72,0,1),
+        background 0.2s ease,
+        box-shadow 0.28s ease;
     }
-    .panel-inner { border-radius: 14px; overflow: hidden; }
+    #panel.panel-dragging { transition: none; }
+
+    /* Inner keeps a FIXED 260px width so its content never reflows while the
+       panel width animates from the icon (36px) up to full — the panel just
+       clips it via overflow:hidden. Panel height is driven explicitly in JS so
+       the morph animates cleanly (an in-flow inner would otherwise force it). */
+    .panel-inner {
+      width: 260px;
+      opacity: 1; transition: opacity 0.16s ease;
+    }
 
     #panel.panel-light {
       --bg:         #ffffff;
@@ -112,27 +137,34 @@
       --icon-col:   rgba(0,0,0,0.3);
       --dial-bg:    rgba(30,30,30,0.9);
       --dial-icon:  #fff;
+
+      --sl-track:    rgba(0,0,0,0.05);
+      --sl-fill:     rgba(0,0,0,0.09);
+      --sl-fill-act: rgba(0,0,0,0.14);
+      --sl-hash:     rgba(0,0,0,0.15);
+      --sl-handle:   rgba(0,0,0,0.8);
     }
 
-    /* Minimized — morphs to icon at top-right home position */
+    /* Minimized — the panel is clipped to a draggable icon.
+       Size + position are driven by JS (inline styles); this class only controls
+       the icon's chrome + fades the inner content out. */
     #panel.minimized {
-      width: 36px; height: 36px; border-radius: 50%;
-      top: 20px; right: 20px; /* always homes here */
       background: var(--dial-bg);
       box-shadow: 0 2px 12px rgba(0,0,0,0.22), 0 0 0 0.5px rgba(0,0,0,0.08);
-      cursor: pointer;
+      cursor: grab;
     }
+    #panel.minimized:active { cursor: grabbing; }
+    #panel.minimized .panel-inner { opacity: 0; pointer-events: none; }
 
     .dial-icon {
       position: absolute; inset: 0;
       display: flex; align-items: center; justify-content: center;
-      opacity: 0; transition: opacity 0.12s ease;
+      opacity: 0; transition: opacity 0.14s ease;
       pointer-events: none; color: var(--dial-icon);
+      font-family: 'DM Serif Display', 'Playfair Display', Georgia, serif;
+      font-size: 19px; font-weight: 400; line-height: 1;
     }
     #panel.minimized .dial-icon { opacity: 1; }
-    #panel.minimized .ph,
-    #panel.minimized .pb { opacity: 0; pointer-events: none; transition: opacity 0.08s ease; }
-    .ph, .pb { transition: opacity 0.14s ease 0.06s; }
 
     /* Header */
     .ph {
@@ -219,26 +251,48 @@
       text-transform: uppercase; color: var(--text-lo);
     }
 
-    /* Scrubber rows */
+    /* Static rows (Family / Align) */
     .row { display: flex; align-items: center; padding: 4px 10px; gap: 8px; min-height: 34px; }
-    .row + .row { border-top: 0.5px solid var(--border-row); }
 
-    .row-label {
-      flex-shrink: 0; font-size: 11px; font-weight: 500; color: var(--text-mid);
-      background: var(--chip-bg); border-radius: 6px; padding: 4px 9px;
-      cursor: ew-resize; white-space: nowrap;
-      transition: background 0.12s, color 0.12s; border: 0.5px solid var(--chip-bdr);
+    /* Custom font picker — native <option> can't render per-font styling in the
+       popup on Chrome/Safari, so each entry is a real element previewing its own face. */
+    .font-picker { padding: 4px 10px 8px; }
+    .font-trigger {
+      width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      background: var(--sel-bg); border: 0.5px solid var(--sel-bdr); border-radius: 8px;
+      color: var(--sel-col); font-size: 14px; padding: 7px 10px; cursor: pointer;
+      transition: background 0.12s, border-color 0.12s; text-align: left;
     }
-    .row-label:hover { background: var(--chip-hover); color: var(--text-hi); }
-    .row-label.scrubbing { background: var(--chip-scr); color: var(--text-hi); }
+    .font-trigger:hover { border-color: var(--chip-hover); }
+    .font-trigger-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.1; }
+    .font-trigger .chev { color: var(--text-mid); flex-shrink: 0; transition: transform 0.18s cubic-bezier(0.32,0.72,0,1); }
+    .font-picker.open .font-trigger .chev { transform: rotate(180deg); }
 
-    .row-val { flex: 1; text-align: right; font-size: 11px; color: var(--text-val); font-family: 'Fragment Mono','Geist Mono',monospace; cursor: default; }
-    .row-input { flex: 1; text-align: right; background: none; border: none; outline: none; font-size: 11px; font-family: 'Fragment Mono','Geist Mono',monospace; color: var(--text-hi); padding: 0; display: none; }
-    .row-select { flex: 1; background: var(--sel-bg); border: 0.5px solid var(--sel-bdr); border-radius: 7px; color: var(--sel-col); font-size: 11px; padding: 4px 24px 4px 8px; outline: none; cursor: pointer; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='M1 1l3 3 3-3' stroke='rgba(128,128,128,0.5)' stroke-width='1.2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; font-family: inherit; }
-    .row-select option { background: #1c1c1c; color: #e8e8e8; }
+    .font-list {
+      display: none; margin-top: 5px; max-height: 232px; overflow-y: auto;
+      background: var(--sel-bg); border: 0.5px solid var(--sel-bdr); border-radius: 8px; padding: 3px;
+    }
+    .font-picker.open .font-list { display: block; }
+    .font-list::-webkit-scrollbar { width: 8px; }
+    .font-list::-webkit-scrollbar-thumb { background: var(--chip-bg); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
+    .font-group-label {
+      font-size: 9px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--text-lo); padding: 7px 8px 3px;
+    }
+    .font-item {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 7px 9px; border-radius: 6px; cursor: pointer;
+      color: var(--text-mid); font-size: 15px; line-height: 1.15;
+      transition: background 0.1s, color 0.1s;
+    }
+    .font-item span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .font-item:hover { background: var(--bg-hover); color: var(--text-hi); }
+    .font-item.current { color: var(--text-hi); }
+    .fi-check { color: #4ade80; font-size: 11px; flex-shrink: 0; opacity: 0; }
+    .font-item.current .fi-check { opacity: 1; }
 
     .align-row { display: flex; gap: 4px; flex: 1; justify-content: flex-end; }
-    .align-btn { width: 28px; height: 24px; border: 0.5px solid var(--ab-bdr); background: var(--ab-bg); color: var(--ab-col); border-radius: 6px; cursor: pointer; transition: all 0.12s; display: flex; align-items: center; justify-content: center; }
+    .align-btn { width: 28px; height: 24px; border: 0.5px solid var(--ab-bdr); background: var(--ab-bg); color: var(--ab-col); border-radius: 8px; cursor: pointer; transition: all 0.12s; display: flex; align-items: center; justify-content: center; }
     .align-btn:hover { color: var(--text-hi); border-color: var(--chip-hover); }
     .align-btn.active { background: var(--ab-act-bg); border-color: var(--ab-act-bdr); color: var(--text-hi); }
 
@@ -246,28 +300,72 @@
     .reset-btn { width: 100%; padding: 6px; background: rgba(255,60,60,0.07); border: 0.5px solid rgba(255,60,60,0.15); border-radius: 8px; color: rgba(255,100,100,0.6); font-size: 11px; font-weight: 400; cursor: pointer; transition: all 0.12s; }
     .reset-btn:hover { background: rgba(255,60,60,0.13); color: rgba(255,120,120,0.9); }
 
-    /* DialKit-style tick ruler + cursor */
-    .row[data-trackable] { position: relative; overflow: hidden; }
-    .row[data-trackable]::before {
-      content: ''; position: absolute; inset: 0; pointer-events: none;
-      background: linear-gradient(to right, var(--text-hi) 0px, var(--text-hi) 1px, transparent 1px);
-      background-size: 13px 9px;
-      background-position: 0 center;
-      background-repeat: repeat-x;
-      opacity: 0; transition: opacity 0.12s;
+    /* ══ DIALKIT-STYLE SLIDERS ══ */
+    .sl-row { padding: 3px 10px; }
+    .ts-slider {
+      position: relative;
+      height: 34px;
+      background: var(--sl-track);
+      border: 0.5px solid var(--chip-bdr);
+      border-radius: var(--radius);
+      overflow: hidden;
+      cursor: pointer;
+      touch-action: none;
+      user-select: none;
     }
-    .row[data-trackable]:hover::before { opacity: 0.13; }
-    .row[data-trackable].scrubbing::before { opacity: 0.18; }
-    .row-cursor {
-      position: absolute;
-      top: 50%; transform: translateY(-50%);
-      height: 16px; width: 2px; border-radius: 1px;
-      background: var(--text-hi);
-      left: var(--pct, 0%); pointer-events: none;
-      opacity: 0; transition: opacity 0.12s;
+    /* rubber-band snap-back after an over-drag */
+    .ts-slider.snapping {
+      transition: width 0.34s cubic-bezier(0.22,1,0.36,1), transform 0.34s cubic-bezier(0.22,1,0.36,1);
     }
-    .row[data-trackable]:hover .row-cursor { opacity: 0.75; }
-    .row[data-trackable].scrubbing .row-cursor { opacity: 1; }
+
+    .ts-slider-hashmarks { position: absolute; inset: 0; pointer-events: none; }
+    .ts-slider-hashmark {
+      position: absolute; top: 50%; width: 1px; height: 8px; border-radius: 999px;
+      transform: translate(-50%, -50%);
+      background: transparent; transition: background 0.2s;
+    }
+    .ts-slider.active .ts-slider-hashmark { background: var(--sl-hash); }
+
+    .ts-slider-fill {
+      position: absolute; top: 0; bottom: 0; left: 0; width: 0%;
+      background: var(--sl-fill); transition: background 0.15s; pointer-events: none;
+    }
+    .ts-slider.active .ts-slider-fill { background: var(--sl-fill-act); }
+
+    .ts-slider-handle {
+      position: absolute; top: 50%; left: 0; width: 3px; height: 18px; border-radius: 999px;
+      background: var(--sl-handle); pointer-events: none;
+      opacity: 0; transform: translateY(-50%) scaleX(0.25);
+      transition: opacity 0.18s ease, transform 0.18s cubic-bezier(0.32,0.72,0,1);
+    }
+
+    .ts-slider-label {
+      position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+      font-size: 11px; font-weight: 500; color: var(--text-mid);
+      pointer-events: none; transition: color 0.15s; white-space: nowrap;
+    }
+    .ts-slider.active .ts-slider-label { color: var(--text-hi); }
+
+    .ts-slider-value {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      font-size: 11px; font-weight: 500;
+      font-family: 'Fragment Mono','Geist Mono',monospace;
+      color: var(--text-val); pointer-events: auto;
+      border-bottom: 1px solid transparent; padding-bottom: 1px;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .ts-slider.active .ts-slider-value { color: var(--text-hi); }
+    .ts-slider-value.editable { border-bottom-color: var(--text-mid); cursor: text; }
+
+    .ts-slider-input {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      width: 5ch; text-align: right;
+      background: transparent; border: none; border-bottom: 1px solid var(--text-mid);
+      outline: none; padding: 0 0 1px 0;
+      font-size: 11px; font-weight: 500;
+      font-family: 'Fragment Mono','Geist Mono',monospace; color: var(--text-hi);
+      display: none;
+    }
 
     .theme-icon path { transition: fill 0.15s; }
 
@@ -319,14 +417,11 @@
   </div>
 
   <!-- PANEL -->
-  <div id="panel">
-    <div class="panel-inner">
+  <div id="panel" data-origin-x="right">
 
-      <div class="dial-icon">
-        <svg width="12" height="13" viewBox="0 0 12 13" fill="none">
-          <path d="M0 0.772727V3H4.54545V13H7.45455V3H12V0.772727H0Z" fill="currentColor"/>
-        </svg>
-      </div>
+    <div class="dial-icon">T</div>
+
+    <div class="panel-inner">
 
       <!-- Header -->
       <div class="ph" id="dragHandle">
@@ -370,73 +465,79 @@
 
           <div class="section-head"><span>Typography</span></div>
 
-          <div class="row" data-trackable>
-            <div class="row-cursor"></div>
-            <div class="row-label" data-prop="fontSize" data-min="8" data-max="120" data-step="0.5">Size</div>
-            <span class="row-val" id="vSize">—</span>
-            <input class="row-input" id="iSize" type="number" min="8" max="120" step="0.5">
+          <div class="sl-row">
+            <div class="ts-slider" data-prop="fontSize" data-min="8" data-max="120" data-step="0.5">
+              <div class="ts-slider-hashmarks"></div>
+              <div class="ts-slider-fill"></div>
+              <div class="ts-slider-handle"></div>
+              <span class="ts-slider-label">Size</span>
+              <span class="ts-slider-value" id="vSize">—</span>
+              <input class="ts-slider-input" id="iSize" type="number" min="8" max="120" step="0.5">
+            </div>
           </div>
-          <div class="row" data-trackable>
-            <div class="row-cursor"></div>
-            <div class="row-label" data-prop="fontWeight" data-min="100" data-max="900" data-step="100">Weight</div>
-            <span class="row-val" id="vWeight">—</span>
-            <input class="row-input" id="iWeight" type="number" min="100" max="900" step="100">
+          <div class="sl-row">
+            <div class="ts-slider" data-prop="fontWeight" data-min="100" data-max="900" data-step="100">
+              <div class="ts-slider-hashmarks"></div>
+              <div class="ts-slider-fill"></div>
+              <div class="ts-slider-handle"></div>
+              <span class="ts-slider-label">Weight</span>
+              <span class="ts-slider-value" id="vWeight">—</span>
+              <input class="ts-slider-input" id="iWeight" type="number" min="100" max="900" step="100">
+            </div>
           </div>
-          <div class="row" data-trackable>
-            <div class="row-cursor"></div>
-            <div class="row-label" data-prop="lineHeight" data-min="0.8" data-max="3.0" data-step="0.05">Line Height</div>
-            <span class="row-val" id="vLH">—</span>
-            <input class="row-input" id="iLH" type="number" min="0.8" max="3.0" step="0.05">
+          <div class="sl-row">
+            <div class="ts-slider" data-prop="lineHeight" data-min="0.8" data-max="3.0" data-step="0.05">
+              <div class="ts-slider-hashmarks"></div>
+              <div class="ts-slider-fill"></div>
+              <div class="ts-slider-handle"></div>
+              <span class="ts-slider-label">Line Height</span>
+              <span class="ts-slider-value" id="vLH">—</span>
+              <input class="ts-slider-input" id="iLH" type="number" min="0.8" max="3.0" step="0.05">
+            </div>
           </div>
-          <div class="row" data-trackable>
-            <div class="row-cursor"></div>
-            <div class="row-label" data-prop="letterSpacing" data-min="-0.1" data-max="0.4" data-step="0.005">Spacing</div>
-            <span class="row-val" id="vLS">—</span>
-            <input class="row-input" id="iLS" type="number" min="-0.1" max="0.4" step="0.005">
+          <div class="sl-row">
+            <div class="ts-slider" data-prop="letterSpacing" data-min="-0.1" data-max="0.4" data-step="0.005">
+              <div class="ts-slider-hashmarks"></div>
+              <div class="ts-slider-fill"></div>
+              <div class="ts-slider-handle"></div>
+              <span class="ts-slider-label">Spacing</span>
+              <span class="ts-slider-value" id="vLS">—</span>
+              <input class="ts-slider-input" id="iLS" type="number" min="-0.1" max="0.4" step="0.005">
+            </div>
           </div>
 
           <div class="section-head"><span>Position</span></div>
 
-          <div class="row" data-trackable>
-            <div class="row-cursor"></div>
-            <div class="row-label" data-prop="translateX" data-min="-400" data-max="400" data-step="1">X</div>
-            <span class="row-val" id="vX">0px</span>
-            <input class="row-input" id="iX" type="number" step="1">
+          <div class="sl-row">
+            <div class="ts-slider" data-prop="translateX" data-min="-400" data-max="400" data-step="1">
+              <div class="ts-slider-hashmarks"></div>
+              <div class="ts-slider-fill"></div>
+              <div class="ts-slider-handle"></div>
+              <span class="ts-slider-label">X</span>
+              <span class="ts-slider-value" id="vX">0px</span>
+              <input class="ts-slider-input" id="iX" type="number" step="1">
+            </div>
           </div>
-          <div class="row" data-trackable>
-            <div class="row-cursor"></div>
-            <div class="row-label" data-prop="translateY" data-min="-400" data-max="400" data-step="1">Y</div>
-            <span class="row-val" id="vY">0px</span>
-            <input class="row-input" id="iY" type="number" step="1">
+          <div class="sl-row">
+            <div class="ts-slider" data-prop="translateY" data-min="-400" data-max="400" data-step="1">
+              <div class="ts-slider-hashmarks"></div>
+              <div class="ts-slider-fill"></div>
+              <div class="ts-slider-handle"></div>
+              <span class="ts-slider-label">Y</span>
+              <span class="ts-slider-value" id="vY">0px</span>
+              <input class="ts-slider-input" id="iY" type="number" step="1">
+            </div>
           </div>
 
           <div class="section-head"><span>Family</span></div>
-          <div class="row">
-            <select class="row-select" id="fontSelect">
-              <optgroup label="Sans">
-                <option value="'Söhne', sans-serif">Söhne</option>
-                <option value="'Inter', sans-serif">Inter</option>
-                <option value="'Plus Jakarta Sans', sans-serif">Plus Jakarta Sans</option>
-                <option value="'Space Grotesk', sans-serif">Space Grotesk</option>
-                <option value="'DM Sans', sans-serif">DM Sans</option>
-                <option value="'Outfit', sans-serif">Outfit</option>
-                <option value="system-ui, sans-serif">System UI</option>
-              </optgroup>
-              <optgroup label="Serif">
-                <option value="'Newsreader', serif">Newsreader</option>
-                <option value="'DM Serif Display', serif">DM Serif Display</option>
-                <option value="'Playfair Display', serif">Playfair Display</option>
-                <option value="'Cormorant Garamond', serif">Cormorant Garamond</option>
-                <option value="'Lora', serif">Lora</option>
-                <option value="'Libre Baskerville', serif">Libre Baskerville</option>
-                <option value="Georgia, serif">Georgia</option>
-              </optgroup>
-              <optgroup label="Mono">
-                <option value="'Geist Mono', monospace">Geist Mono</option>
-                <option value="'Fragment Mono', monospace">Fragment Mono</option>
-                <option value="ui-monospace, monospace">System Mono</option>
-              </optgroup>
-            </select>
+          <div class="font-picker" id="fontPicker">
+            <button class="font-trigger" id="fontTrigger" type="button">
+              <span class="font-trigger-name" id="fontTriggerName">Söhne</span>
+              <svg class="chev" width="8" height="5" viewBox="0 0 8 5" fill="none">
+                <path d="M1 1l3 3 3-3" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <div class="font-list" id="fontList"></div>
           </div>
 
           <div class="section-head"><span>Align</span></div>
@@ -470,11 +571,14 @@
 
     const $ = id => document.getElementById(id);
     const panel = $('panel'), dragHandle = $('dragHandle');
+    const panelInner = panel.querySelector('.panel-inner');
     const minBtn = $('minBtn'), themeBtn = $('themeBtn');
     const selectHint = $('selectHint'), controls = $('controls');
-    const fontSelect = $('fontSelect'), copyBtn = $('copyBtn'), resetBtn = $('resetBtn');
+    const copyBtn = $('copyBtn'), resetBtn = $('resetBtn');
+    const fontPicker = $('fontPicker'), fontTrigger = $('fontTrigger'), fontTriggerName = $('fontTriggerName'), fontList = $('fontList');
 
     let active = null, txX = 0, txY = 0;
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
     // ════════════════════════════════
     // UNDO STACK
@@ -554,68 +658,128 @@
     }
 
     // ════════════════════════════════
-    // PANEL DRAG (works minimized too)
+    // PANEL DRAG + EXPAND / COLLAPSE  (dialkit-derived)
+    //  - collapsed: the whole icon is draggable, stays where you drop it
+    //  - expanded : only the header drags
+    //  - expand grows FROM the icon toward screen-center (origin edge stays fixed)
+    //  - collapse shrinks back to the icon's location
     // ════════════════════════════════
-    let pDrag = false, pOx = 0, pOy = 0, pX = 0, pY = 0, pInit = false;
-    let dragStartX = 0, dragStartY = 0, dragMoved = false;
+    const ICON = 36, PANEL_W = 260, DRAG_THRESHOLD = 8;
+    let minimized = true;
+    let iconX = 0, iconY = 0;        // collapsed icon top-left (the anchor)
+    let originX = 'right';           // which edge stays pinned to the icon
+    let pDrag = false, pOx = 0, pOy = 0, dragStartX = 0, dragStartY = 0, dragMoved = false, suppressClick = false;
 
-    function initPanelPos() {
-      if (pInit) return;
-      const r = panel.getBoundingClientRect();
-      pX = r.left; pY = r.top;
+    function computeOrigin() {
+      const cx = iconX + ICON / 2;
+      return cx < window.innerWidth / 2 ? 'left' : 'right';
+    }
+
+    function layoutCollapsed() {
       panel.style.right = 'auto';
-      panel.style.left = pX + 'px';
-      panel.style.top  = pY + 'px';
-      pInit = true;
+      panel.style.left = iconX + 'px';
+      panel.style.top  = iconY + 'px';
     }
 
-    function beginDrag(e, captureEl) {
-      initPanelPos();
-      pDrag = true;
-      dragStartX = e.clientX; dragStartY = e.clientY; dragMoved = false;
-      pOx = e.clientX - pX; pOy = e.clientY - pY;
-      captureEl.setPointerCapture(e.pointerId);
-      e.preventDefault();
+    function layoutExpanded() {
+      const h = panelInner.offsetHeight || 300;
+      let left = originX === 'right' ? (iconX + ICON - PANEL_W) : iconX;
+      let top  = iconY;
+      left = clamp(left, 8, window.innerWidth - PANEL_W - 8);
+      top  = clamp(top, 8, Math.max(8, window.innerHeight - h - 8));
+      panel.style.right = 'auto';
+      panel.style.left = left + 'px';
+      panel.style.top  = top + 'px';
     }
 
-    dragHandle.addEventListener('pointerdown', e => {
-      if (e.target.closest('.icon-btn') || e.target.closest('.copy-btn') || e.target.closest('.version-wrap')) return;
-      if (panel.classList.contains('minimized')) return;
-      beginDrag(e, dragHandle);
-    });
-
-    document.addEventListener('pointermove', e => {
-      if (!pDrag) return;
-      if (Math.abs(e.clientX - dragStartX) > 3 || Math.abs(e.clientY - dragStartY) > 3) dragMoved = true;
-      pX = Math.max(0, Math.min(window.innerWidth  - panel.offsetWidth,  e.clientX - pOx));
-      pY = Math.max(0, Math.min(window.innerHeight - panel.offsetHeight, e.clientY - pOy));
-      panel.style.left = pX + 'px';
-      panel.style.top  = pY + 'px';
-    });
-
-    document.addEventListener('pointerup', () => { pDrag = false; });
-
-    // ════════════════════════════════
-    // MINIMIZE / EXPAND
-    // ════════════════════════════════
-    minBtn.addEventListener('click', e => {
-      e.stopPropagation();
-      // Clear JS-set positioning so CSS homes the icon to top-right
-      panel.style.left = '';
-      panel.style.top  = '';
-      panel.style.right = '';
-      pInit = false;
-      panel.classList.add('minimized');
-    });
-
-    panel.addEventListener('click', e => {
-      if (!panel.classList.contains('minimized')) return;
-      // Clear JS overrides so CSS homes the panel to its default expanded position
-      panel.style.left = '';
-      panel.style.top  = '';
-      panel.style.right = '';
-      pInit = false;
+    function expand() {
+      if (!minimized) return;
+      originX = computeOrigin();
+      panel.dataset.originX = originX;
+      const targetH = panelInner.offsetHeight;   // inner is fixed-width, so this is exact
       panel.classList.remove('minimized');
+      panel.style.width = PANEL_W + 'px';
+      panel.style.height = targetH + 'px';
+      panel.style.borderRadius = '14px';
+      layoutExpanded();
+      minimized = false;
+    }
+
+    // Keep the panel's explicit height in sync with its content (e.g. the hint
+    // showing/hiding on select) — animates smoothly via the panel transition.
+    function resyncHeight() {
+      if (!minimized) panel.style.height = panelInner.offsetHeight + 'px';
+    }
+
+    function collapse() {
+      if (minimized) return;
+      // re-derive the icon anchor from the panel's current spot (it may have been dragged)
+      const r = panel.getBoundingClientRect();
+      iconX = originX === 'right' ? (r.right - ICON) : r.left;
+      iconY = r.top;
+      // freeze the current pixel height so the shrink animates (auto -> 36px won't)
+      panel.style.transition = 'none';
+      panel.style.height = panel.offsetHeight + 'px';
+      panel.offsetHeight;
+      panel.style.transition = '';
+      panel.classList.add('minimized');
+      panel.style.width = ICON + 'px';
+      panel.style.height = ICON + 'px';
+      panel.style.borderRadius = '50%';
+      layoutCollapsed();
+      minimized = true;
+    }
+
+    const DRAG_EXCLUDE = '.icon-btn,.copy-btn,.version-wrap,.ts-slider,.font-picker,.align-btn,.reset-btn,.text-el,input,select';
+
+    panel.addEventListener('pointerdown', e => {
+      if (e.target.closest(DRAG_EXCLUDE)) return;
+      // expanded: only the header drags. collapsed: the whole icon drags.
+      if (!minimized && !e.target.closest('.ph')) return;
+      pDrag = true; dragMoved = false;
+      dragStartX = e.clientX; dragStartY = e.clientY;
+      const r = panel.getBoundingClientRect();
+      pOx = e.clientX - r.left; pOy = e.clientY - r.top;
+      panel.classList.add('panel-dragging');
+      panel.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+
+    panel.addEventListener('pointermove', e => {
+      if (!pDrag) return;
+      if (Math.hypot(e.clientX - dragStartX, e.clientY - dragStartY) > DRAG_THRESHOLD) dragMoved = true;
+      const w = panel.offsetWidth, h = panel.offsetHeight;
+      const left = clamp(e.clientX - pOx, 0, window.innerWidth  - w);
+      const top  = clamp(e.clientY - pOy, 0, window.innerHeight - h);
+      panel.style.right = 'auto';
+      panel.style.left = left + 'px';
+      panel.style.top  = top + 'px';
+    });
+
+    panel.addEventListener('pointerup', e => {
+      if (!pDrag) return;
+      pDrag = false;
+      panel.classList.remove('panel-dragging');
+      if (dragMoved) {
+        suppressClick = true;
+        if (minimized) { iconX = parseFloat(panel.style.left) || 0; iconY = parseFloat(panel.style.top) || 0; }
+        setTimeout(() => { suppressClick = false; }, 0);
+      }
+    });
+    panel.addEventListener('pointercancel', () => { pDrag = false; panel.classList.remove('panel-dragging'); });
+
+    panel.addEventListener('click', () => {
+      if (suppressClick) return;
+      if (minimized) expand();
+    });
+    minBtn.addEventListener('click', e => { e.stopPropagation(); collapse(); });
+
+    window.addEventListener('resize', () => {
+      if (minimized) {
+        iconX = clamp(iconX, 0, window.innerWidth - ICON);
+        iconY = clamp(iconY, 0, window.innerHeight - ICON);
+        layoutCollapsed();
+      }
     });
 
     // ════════════════════════════════
@@ -724,6 +888,7 @@
         syncFrom(el);
         selectHint.classList.remove('visible');
         controls.classList.remove('disabled');
+        resyncHeight();
 
         // Pin badge to click location inside .text-wrap
         const wrap = el.closest('.text-wrap');
@@ -761,92 +926,204 @@
         active = null;
         selectHint.classList.add('visible');
         controls.classList.add('disabled');
+        resyncHeight();
       }
     });
 
     // ════════════════════════════════
-    // SCRUBBER
+    // DIALKIT-STYLE SLIDERS
+    //  click-to-set (snap), drag-to-set, rubber-band over-drag,
+    //  spring-ish handle, hover-dwell inline editing, hashmarks.
     // ════════════════════════════════
-    let scrubEl = null, scrubStart = 0, scrubVal = 0;
+    const DEAD_ZONE = 32, MAX_STRETCH = 8, MAX_RANGE = 200;
 
-    document.querySelectorAll('.row-label').forEach(label => {
-      label.addEventListener('pointerdown', e => {
+    function decimalsForStep(step) {
+      const s = step.toString(); const dot = s.indexOf('.');
+      return dot === -1 ? 0 : s.length - dot - 1;
+    }
+
+    function formatVal(prop, v) {
+      if (prop === 'fontSize')      return Math.round(v) + 'px';
+      if (prop === 'fontWeight')    return Math.round(v);
+      if (prop === 'lineHeight')    return (+v).toFixed(2);
+      if (prop === 'letterSpacing') return (+v).toFixed(3) + 'em';
+      if (prop === 'translateX' || prop === 'translateY') return Math.round(v) + 'px';
+      return v;
+    }
+
+    function buildHashmarks(slider, min, max, step) {
+      const box = slider.querySelector('.ts-slider-hashmarks');
+      const steps = (max - min) / step;
+      const marks = [];
+      if (steps <= 10) {
+        for (let i = 1; i < steps; i++) marks.push(((i * step) / (max - min)) * 100);
+      } else {
+        for (let i = 1; i < 10; i++) marks.push(i * 10);
+      }
+      box.innerHTML = marks.map(l => `<div class="ts-slider-hashmark" style="left:${l}%"></div>`).join('');
+    }
+
+    // Update fill + handle for a prop's slider (also called from applyProp / syncFrom)
+    function updateRowTrack(prop, val) {
+      const slider = document.querySelector(`.ts-slider[data-prop="${prop}"]`);
+      if (!slider) return;
+      const min = parseFloat(slider.dataset.min), max = parseFloat(slider.dataset.max);
+      const pct = clamp(((val - min) / (max - min)) * 100, 0, 100);
+      slider.dataset.pct = pct;
+      slider.querySelector('.ts-slider-fill').style.width = pct.toFixed(2) + '%';
+      updateHandle(slider);
+    }
+
+    function updateHandle(slider) {
+      const handle = slider.querySelector('.ts-slider-handle');
+      const labelEl = slider.querySelector('.ts-slider-label');
+      const valEl = slider.querySelector('.ts-slider-value');
+      const w = slider.offsetWidth || 240;
+      const pct = parseFloat(slider.dataset.pct) || 0;
+
+      handle.style.left = clamp((pct / 100) * w - 1.5, 2, w - 4) + 'px';
+
+      // value-dodge: dim + squish the handle when it would collide with the label/value text
+      const leftT  = ((10 + (labelEl.offsetWidth || 30) + 8) / w) * 100;
+      const rightT = ((w - 10 - (valEl.offsetWidth || 30) - 8) / w) * 100;
+      const dodge = pct < leftT || pct > rightT;
+
+      const isActive = slider.classList.contains('active');
+      const isDrag   = slider.classList.contains('dragging');
+      let opacity = 0, sx = 0.25, sy = 1;
+      if (isActive) {
+        sx = 1;
+        if (dodge)       { opacity = 0.12; sy = 0.75; }
+        else if (isDrag) { opacity = 0.9; }
+        else             { opacity = 0.5; }
+      }
+      handle.style.opacity = opacity;
+      handle.style.transform = `translateY(-50%) scaleX(${sx}) scaleY(${sy})`;
+    }
+
+    function setupSlider(slider) {
+      const prop = slider.dataset.prop;
+      const min = parseFloat(slider.dataset.min), max = parseFloat(slider.dataset.max), step = parseFloat(slider.dataset.step);
+      const valEl = slider.querySelector('.ts-slider-value');
+      const input = slider.querySelector('.ts-slider-input');
+      const decimals = decimalsForStep(step);
+
+      buildHashmarks(slider, min, max, step);
+
+      let interacting = false, clickFlag = true, downX = 0, downY = 0, rect = null;
+      let editable = false, hoverTimer = null;
+
+      const roundV  = v => parseFloat((Math.round(v / step) * step).toFixed(decimals));
+      const posToVal = clientX => {
+        const p = clamp((clientX - rect.left) / (slider.offsetWidth || 1), 0, 1);
+        return clamp(min + p * (max - min), min, max);
+      };
+      const snapToDecile = raw => {
+        const n = (raw - min) / (max - min), nearest = Math.round(n * 10) / 10;
+        return Math.abs(n - nearest) <= 0.03125 ? min + nearest * (max - min) : raw;
+      };
+
+      function commit(v) {
         if (!active) return;
+        v = clamp(roundV(v), min, max);
+        applyProp(prop, v);           // applies to element + updateRowTrack + saveCurrentVersion
+        valEl.textContent = formatVal(prop, v);
+      }
+
+      function applyRubber(clientX) {
+        let stretch = 0;
+        if (clientX < rect.left)        { const o = Math.max(0, (rect.left - clientX) - DEAD_ZONE); stretch = -MAX_STRETCH * Math.sqrt(Math.min(o / MAX_RANGE, 1)); }
+        else if (clientX > rect.right)  { const o = Math.max(0, (clientX - rect.right) - DEAD_ZONE); stretch =  MAX_STRETCH * Math.sqrt(Math.min(o / MAX_RANGE, 1)); }
+        slider.classList.remove('snapping');
+        slider.style.width = `calc(100% + ${Math.abs(stretch)}px)`;
+        slider.style.transform = `translateX(${stretch < 0 ? stretch : 0}px)`;
+      }
+      function releaseRubber() {
+        slider.classList.add('snapping');
+        slider.style.width = '';
+        slider.style.transform = '';
+      }
+
+      slider.addEventListener('pointerdown', e => {
+        if (!active) return;
+        if (e.target === valEl && editable) return;   // let the value-edit click through
+        e.preventDefault(); e.stopPropagation();
+        slider.setPointerCapture(e.pointerId);
+        downX = e.clientX; downY = e.clientY; clickFlag = true; interacting = true;
+        rect = slider.getBoundingClientRect();
+        slider.classList.add('active');
+        updateHandle(slider);
         pushUndo();
-        scrubEl = label;
-        scrubStart = e.clientX;
-        scrubVal = getCurrentValue(label.dataset.prop);
-        label.classList.add('scrubbing');
-        label.closest('.row').classList.add('scrubbing');
-        label.setPointerCapture(e.pointerId);
-        e.preventDefault();
       });
-    });
 
-    document.addEventListener('pointermove', e => {
-      if (!scrubEl || !active) return;
-      const prop  = scrubEl.dataset.prop;
-      const step  = parseFloat(scrubEl.dataset.step);
-      const min   = parseFloat(scrubEl.dataset.min);
-      const max   = parseFloat(scrubEl.dataset.max);
-      const delta = (e.clientX - scrubStart) * step * 0.5;
-      const val   = Math.min(max, Math.max(min, Math.round((scrubVal + delta) / step) * step));
-      applyProp(prop, val);
-      syncDisplay(prop, val);
-    });
+      slider.addEventListener('pointermove', e => {
+        if (interacting && active) {
+          if (clickFlag && Math.hypot(e.clientX - downX, e.clientY - downY) > 3) {
+            clickFlag = false; slider.classList.add('dragging');
+          }
+          if (!clickFlag) {
+            applyRubber(e.clientX);
+            commit(posToVal(e.clientX));
+          }
+        }
+      });
 
-    document.addEventListener('pointerup', () => {
-      if (scrubEl) {
-        scrubEl.classList.remove('scrubbing');
-        scrubEl.closest('.row').classList.remove('scrubbing');
-        scrubEl = null;
-      }
-    });
+      slider.addEventListener('pointerup', e => {
+        if (!interacting) return;
+        if (clickFlag) {
+          const raw = posToVal(e.clientX);
+          const steps = (max - min) / step;
+          const snapped = steps <= 10
+            ? clamp(min + Math.round((raw - min) / step) * step, min, max)
+            : snapToDecile(raw);
+          commit(snapped);
+        }
+        releaseRubber();
+        interacting = false; slider.classList.remove('dragging');
+        updateHandle(slider);
+      });
 
-    document.querySelectorAll('.row-val').forEach(valEl => {
-      valEl.addEventListener('dblclick', () => {
-        if (!active) return;
-        const row   = valEl.closest('.row');
-        const label = row.querySelector('.row-label');
-        const input = row.querySelector('.row-input');
-        if (!label || !input) return;
-        input.value = getCurrentValue(label.dataset.prop);
-        valEl.style.display = 'none';
-        input.style.display = 'block';
+      slider.addEventListener('pointercancel', () => {
+        interacting = false; slider.classList.remove('dragging'); releaseRubber(); updateHandle(slider);
+      });
+
+      slider.addEventListener('mouseenter', () => { slider.classList.add('active'); updateHandle(slider); });
+      slider.addEventListener('mouseleave', () => { if (!interacting) { slider.classList.remove('active'); updateHandle(slider); } });
+
+      // hover-dwell -> value becomes editable -> click to type
+      valEl.addEventListener('mouseenter', () => {
+        hoverTimer = setTimeout(() => { editable = true; valEl.classList.add('editable'); }, 800);
+      });
+      valEl.addEventListener('mouseleave', () => {
+        clearTimeout(hoverTimer);
+        if (input.style.display === 'none' || !input.style.display) { editable = false; valEl.classList.remove('editable'); }
+      });
+      valEl.addEventListener('click', e => {
+        if (!editable || !active) return;
+        e.stopPropagation();
+        input.value = getCurrentValue(prop);
+        valEl.style.display = 'none'; input.style.display = 'block';
         input.focus(); input.select();
       });
-    });
-
-    document.querySelectorAll('.row-input').forEach(input => {
-      const commit = () => {
-        const row   = input.closest('.row');
-        const label = row.querySelector('.row-label');
-        const valEl = row.querySelector('.row-val');
-        if (!label || !active) return;
-        const val = parseFloat(input.value);
-        if (!isNaN(val)) { pushUndo(); applyProp(label.dataset.prop, val); syncDisplay(label.dataset.prop, val); }
-        input.style.display = 'none';
-        valEl.style.display = '';
+      const commitInput = () => {
+        const v = parseFloat(input.value);
+        if (!isNaN(v)) { pushUndo(); commit(v); }
+        input.style.display = 'none'; valEl.style.display = '';
+        editable = false; valEl.classList.remove('editable');
       };
-      input.addEventListener('blur', commit);
+      input.addEventListener('blur', commitInput);
       input.addEventListener('keydown', e => {
-        if (e.key === 'Enter') commit();
-        if (e.key === 'Escape') { input.style.display='none'; input.closest('.row').querySelector('.row-val').style.display=''; }
+        if (e.key === 'Enter') commitInput();
+        if (e.key === 'Escape') { input.style.display = 'none'; valEl.style.display = ''; editable = false; valEl.classList.remove('editable'); }
       });
-    });
+      input.addEventListener('pointerdown', e => e.stopPropagation());
+    }
+
+    document.querySelectorAll('.ts-slider').forEach(setupSlider);
 
     // ════════════════════════════════
     // SYNC / APPLY
     // ════════════════════════════════
-    function updateRowTrack(prop, val) {
-      const label = document.querySelector(`.row-label[data-prop="${prop}"]`);
-      if (!label) return;
-      const min = parseFloat(label.dataset.min);
-      const max = parseFloat(label.dataset.max);
-      const pct = Math.max(0, Math.min(100, ((val - min) / (max - min)) * 100));
-      label.closest('.row').style.setProperty('--pct', pct.toFixed(1) + '%');
-    }
-
     function syncFrom(el) {
       const cs   = getComputedStyle(el);
       const fsz  = parseFloat(cs.fontSize);
@@ -871,11 +1148,7 @@
       updateRowTrack('translateX',    txX);
       updateRowTrack('translateY',    txY);
 
-      const fam = cs.fontFamily;
-      for (const opt of fontSelect.options) {
-        const key = opt.value.replace(/'/g,'').split(',')[0].trim();
-        if (fam.replace(/['"]/g,'').includes(key)) { fontSelect.value = opt.value; break; }
-      }
+      setFontUI(cs.fontFamily);
       document.querySelectorAll('.align-btn').forEach(b =>
         b.classList.toggle('active', b.dataset.align === cs.textAlign));
     }
@@ -905,22 +1178,80 @@
       saveCurrentVersion();
     }
 
-    function syncDisplay(prop, val) {
-      if (prop === 'fontSize')      $('vSize').textContent   = Math.round(val) + 'px';
-      if (prop === 'fontWeight')    $('vWeight').textContent = Math.round(val);
-      if (prop === 'lineHeight')    $('vLH').textContent     = val.toFixed(2);
-      if (prop === 'letterSpacing') $('vLS').textContent     = val.toFixed(3) + 'em';
-      if (prop === 'translateX')    $('vX').textContent      = Math.round(val) + 'px';
-      if (prop === 'translateY')    $('vY').textContent      = Math.round(val) + 'px';
-      updateRowTrack(prop, val);
+    // ════════════════════════════════
+    // FONT FAMILY PICKER — each entry previews in its own typeface
+    // ════════════════════════════════
+    const FONTS = [
+      { group: 'Sans', name: 'Söhne',             value: "'Söhne', sans-serif" },
+      { group: 'Sans', name: 'Inter',             value: "'Inter', sans-serif" },
+      { group: 'Sans', name: 'Plus Jakarta Sans', value: "'Plus Jakarta Sans', sans-serif" },
+      { group: 'Sans', name: 'Space Grotesk',     value: "'Space Grotesk', sans-serif" },
+      { group: 'Sans', name: 'DM Sans',           value: "'DM Sans', sans-serif" },
+      { group: 'Sans', name: 'Outfit',            value: "'Outfit', sans-serif" },
+      { group: 'Sans', name: 'System UI',         value: "system-ui, sans-serif" },
+      { group: 'Serif', name: 'Newsreader',          value: "'Newsreader', serif" },
+      { group: 'Serif', name: 'DM Serif Display',    value: "'DM Serif Display', serif" },
+      { group: 'Serif', name: 'Playfair Display',    value: "'Playfair Display', serif" },
+      { group: 'Serif', name: 'Cormorant Garamond',  value: "'Cormorant Garamond', serif" },
+      { group: 'Serif', name: 'Lora',                value: "'Lora', serif" },
+      { group: 'Serif', name: 'Libre Baskerville',   value: "'Libre Baskerville', serif" },
+      { group: 'Serif', name: 'Georgia',             value: "Georgia, serif" },
+      { group: 'Mono', name: 'Geist Mono',        value: "'Geist Mono', monospace" },
+      { group: 'Mono', name: 'Fragment Mono',     value: "'Fragment Mono', monospace" },
+      { group: 'Mono', name: 'System Mono',       value: "ui-monospace, monospace" },
+    ];
+
+    function renderFontList() {
+      const groups = ['Sans', 'Serif', 'Mono'];
+      fontList.innerHTML = groups.map(g => {
+        const items = FONTS.filter(f => f.group === g).map(f => {
+          const v = f.value.replace(/"/g, '&quot;');
+          return `<div class="font-item" data-value="${v}" style="font-family:${v}">
+                    <span>${f.name}</span><span class="fi-check">✓</span>
+                  </div>`;
+        }).join('');
+        return `<div class="font-group-label">${g}</div>${items}`;
+      }).join('');
+
+      fontList.querySelectorAll('.font-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const val = item.dataset.value;
+          if (active) { pushUndo(); active.style.fontFamily = val; saveCurrentVersion(); setFontUI(val); }
+          closeFontList();
+        });
+      });
     }
 
-    fontSelect.addEventListener('change', () => {
-      if (!active) return;
-      pushUndo();
-      active.style.fontFamily = fontSelect.value;
-      saveCurrentVersion();
+    // Reflect the given (computed or explicit) font-family in the trigger + current marker
+    function setFontUI(fam) {
+      const clean = (fam || '').replace(/['"]/g, '');
+      let match = null;
+      for (const f of FONTS) {
+        const key = f.value.replace(/'/g, '').split(',')[0].trim();
+        if (clean.includes(key)) { match = f; break; }
+      }
+      const chosen = match || FONTS[0];
+      fontTriggerName.textContent = chosen.name;
+      fontTriggerName.style.fontFamily = chosen.value;
+      fontList.querySelectorAll('.font-item').forEach(it =>
+        it.classList.toggle('current', !!match && it.dataset.value === chosen.value));
+    }
+
+    function closeFontList() {
+      if (!fontPicker.classList.contains('open')) return;
+      fontPicker.classList.remove('open');
+      resyncHeight();
+    }
+
+    fontTrigger.addEventListener('click', e => {
+      e.stopPropagation();
+      fontPicker.classList.toggle('open');
+      resyncHeight();
     });
+    document.addEventListener('click', e => { if (!e.target.closest('#fontPicker')) closeFontList(); });
+
+    renderFontList();
+    setFontUI("'Söhne', sans-serif");
 
     document.querySelectorAll('.align-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -1005,8 +1336,25 @@
       }
     });
 
+    // ════════════════════════════════
+    // INIT — measure the expanded height, then home the icon top-right (no anim)
+    // ════════════════════════════════
     updateBadges();
-    panel.classList.add('minimized');
+    (function initMinimized() {
+      iconX = window.innerWidth - ICON - 20;
+      iconY = 20;
+      originX = 'right';
+      panel.dataset.originX = 'right';
+      panel.style.transition = 'none';
+      panel.classList.add('minimized');
+      panel.style.width = ICON + 'px';
+      panel.style.height = ICON + 'px';
+      panel.style.borderRadius = '50%';
+      layoutCollapsed();
+      panel.offsetHeight;             // flush before re-enabling transitions
+      panel.style.transition = '';
+      minimized = true;
+    })();
   </script>
 </body>
 </html>

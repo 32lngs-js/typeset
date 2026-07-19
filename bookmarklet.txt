@@ -1,0 +1,15 @@
+TypeSet overlay bookmarklet
+===========================
+Create a new browser bookmark and paste this as the URL. Click it on any page
+(your dev server, staging, a live site) to toggle the TypeSet inspector on/off.
+
+javascript:(function(){if(window.__typesetOverlay){window.__typesetOverlay.destroy();return;}var s=document.createElement('script');s.src='https://32lngs-js.github.io/typeset/typeset-overlay.js?'+Date.now();document.body.appendChild(s);})();
+
+Notes
+-----
+- Requires typeset-overlay.js to be published (GitHub Pages serves it at that URL
+  once this repo is pushed).
+- Some sites block injected scripts via Content-Security-Policy. On a CSP-locked
+  page, open DevTools and paste the contents of typeset-overlay.js into the
+  console instead — same result.
+- Your own localhost dev servers almost never set CSP, so the bookmarklet just works.
