@@ -898,6 +898,12 @@
   }
   const CSS_escape = s => (window.CSS && CSS.escape) ? CSS.escape(s) : s.replace(/[^a-zA-Z0-9_-]/g, '\\$&');
   const MCP_PORT = 8800;
+  // Routing token: which project/chat owns changes from this page. The agent bakes it into
+  // the script tag as data-project (its pwd); falls back to the page origin if absent.
+  const TS_PROJECT = (function () {
+    const s = document.currentScript || document.querySelector('script[src*="typeset-overlay"]');
+    return (s && s.getAttribute('data-project')) || location.origin;
+  })();
   const PROP_MAP = [
     ['fontFamily', 'font-family'], ['fontSize', 'font-size'], ['fontWeight', 'font-weight'],
     ['lineHeight', 'line-height'], ['letterSpacing', 'letter-spacing'], ['textAlign', 'text-align'],
@@ -925,9 +931,11 @@
       ].filter(Boolean);
       if (lines.length) blocks.push(`${sel} {\n  ${lines.join('\n  ')}\n}`);
       PROP_MAP.forEach(([js, css]) => {
-        if (s[js]) mcpChanges.push({ selector: sel, property: css, value: s[js], previousValue: cs[js] || null });
+        // Only queue properties the user actually changed (inline value differs from computed).
+        if (s[js] && s[js] !== cs[js]) mcpChanges.push({ selector: sel, property: css, value: s[js], previousValue: cs[js] || null, project: TS_PROJECT });
       });
-      if (s.transform && s.transform !== 'none') mcpChanges.push({ selector: sel, property: 'transform', value: s.transform, previousValue: null });
+      // Position drags (transform) are intentionally NOT queued as typography changes;
+      // they still appear in the copied CSS block above.
     });
     if (!blocks.length) return;
     navigator.clipboard.writeText('/* TypeSet — ' + versions[currentVersionIdx].name + ' */\n\n' + blocks.join('\n\n')).then(() => {

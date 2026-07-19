@@ -57,9 +57,10 @@ The selector comes from TypeSet's `cssSelector()` function: `#id` if the element
 
 | Tool | Purpose |
 |------|---------|
-| `get_pending_changes` | List all queued changes with IDs |
+| `get_pending_changes` | List this session's queued changes with IDs |
 | `apply_typeset_change(changeId)` | Mark a change as applied |
 | `reject_typeset_change(changeId)` | Discard a change the agent can't apply |
+| `set_typeset_project(project)` | Bind this session to a project so it only sees that page's changes (pass the overlay's `data-project`); empty string unbinds |
 
 ### Stateful queue
 
