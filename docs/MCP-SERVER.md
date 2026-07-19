@@ -83,35 +83,33 @@ npx vite
 curl http://127.0.0.1:8800/health
 ```
 
-To connect it to Claude Code for this project, add to `.claude/settings.json`:
+To connect it to Claude Code, register the local build with `claude mcp add` (Claude Code reads MCP servers from `~/.claude.json`, **not** from `settings.json`):
 
-```json
-{
-  "mcpServers": {
-    "typeset": {
-      "command": "node",
-      "args": ["/path/to/typeset/mcp-server/index.js"]
-    }
-  }
-}
+```bash
+claude mcp add typeset --scope user -- node /path/to/typeset/mcp-server/index.js
 ```
+
+Verify with `claude mcp list` — `typeset` should show `✔ Connected`. Start a new session and the `mcp__typeset__*` tools appear.
 
 ### For distribution (npm)
 
-Publish the MCP server as `typeset-mcp` on npm. Users configure it with:
+Published as `typeset-mcp` on npm. Users run one command:
 
-```json
-{
-  "mcpServers": {
-    "typeset": {
-      "command": "npx",
-      "args": ["typeset-mcp"]
-    }
-  }
-}
+```bash
+npx typeset-mcp install
 ```
 
-No git clone, no local install. `npx` handles everything.
+This installs the HTTP daemon (launchd, port 8800), registers the MCP server with Claude Code via `claude mcp add --scope user` (writing `~/.claude.json`), and adds the agent instructions to `~/.claude/CLAUDE.md`. No git clone, no manual config.
+
+> **Do not hand-write the server into `settings.json`.** Claude Code does not load MCP server *definitions* from `~/.claude/settings.json` (or a workspace `.claude/settings.json`) — they are silently ignored and the tools never appear. Definitions live in `~/.claude.json` (via `claude mcp add`) or a project `.mcp.json`; `settings.json` only holds MCP *controls* (`enableAllProjectMcpServers`, `enabledMcpjsonServers`).
+
+Manual alternative, or to register with other agents (Cursor, Windsurf, Codex — Agentation-style):
+
+```bash
+claude mcp add typeset --scope user -- npx -y typeset-mcp
+# or, multi-agent auto-detect:
+npx add-mcp "npx -y typeset-mcp"
+```
 
 The overlay is separate: a single JS file loaded via bookmarklet or script tag. No npm needed.
 
