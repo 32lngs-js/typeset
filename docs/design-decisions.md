@@ -33,9 +33,11 @@ The token is the agent's `pwd` rather than a hash, because the agent is the sing
 
 ## Queue hygiene: commit real changes, not inspection noise
 
-The overlay used to commit every inline-styled property on copy, plus any `transform` left over from dragging an element to reposition it. The result was a queue full of no-op entries (where `value === previousValue`) and stray `translate(...)` transforms that were never meant as type changes. It read as "28 pending changes" when only two were real edits.
+The overlay commits every inline-styled property on copy, plus (previously) any `transform` left over from dragging an element to reposition it. Two problems showed up: most entries display `value === previousValue`, and position drags leak in as fake type changes. It read as "28 pending changes" when only two were real edits.
 
-Decision (v0.1.9): the overlay commits only properties that actually changed (it skips a property when the new inline value equals the computed previous value), and it no longer folds position drags into the typography commit (transforms still land in the copied CSS block, just not in the agent queue). The agent instructions also tell it to skip any no-op change it is asked to apply.
+The `previousValue === value` display has a specific cause. The overlay reads `previousValue` from `getComputedStyle(el)` at copy time, but by then the element already carries the user's inline edit, so computed equals the new value. A first naive fix (v0.1.9) tried to filter with `s[js] !== cs[js]`; because computed always equals inline, that dropped EVERY change and silently broke Copy entirely (nothing reached the daemon). It was reverted immediately.
+
+Decision: position drags are no longer queued as typography changes (transforms still land in the copied CSS block, just not in the agent queue), which shipped. Correct no-op detection and a truthful `previousValue` require snapshotting each element's computed style at SELECTION time, before any inline edit, and comparing against that snapshot; `trackEdited` runs only after the first style is applied, so it is too late to capture the original there. That is a tracked follow-up. Until then the overlay commits all scrubbed properties (functional, with mild noise), and the agent skips any change whose value already matches the file.
 
 ## Daemon lives in the npx cache (fragility to fix)
 
