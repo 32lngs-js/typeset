@@ -45,7 +45,9 @@ When you click Copy CSS, TypeSet sends one object per changed property:
 ]
 ```
 
-The selector comes from TypeSet's existing `cssSelector()` function (ID, class, or nth-of-type). The previous value comes from `getComputedStyle` before the edit.
+The selector comes from TypeSet's `cssSelector()` function: `#id` if the element has one, otherwise `tag.class1.class2` (up to two classes, excluding internal `typeset-` prefixed ones), with `:nth-of-type(N)` appended for ambiguous siblings.
+
+**CSS lookup note:** The selector sent to the agent (e.g. `h1.display`) may be more specific than the actual CSS rule (e.g. `.display`). When searching, try the full selector first, then fall back to searching by class name. Also note that styles may live in `<style>` blocks inside HTML files rather than standalone `.css` files.
 
 ### What the agent sees
 

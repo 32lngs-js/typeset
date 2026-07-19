@@ -30,7 +30,7 @@ mcp.resource(
 
 mcp.tool(
   "get_pending_changes",
-  "List all CSS changes committed from the TypeSet browser overlay that haven't been applied yet",
+  "List all CSS changes committed from the TypeSet browser overlay that haven't been applied yet. Each change has a selector (e.g. 'h1.display'), property, and value. To locate the CSS rule: (1) search by the class portion of the selector — e.g. for 'h1.display' search for '.display' — since rules often use class-only selectors; (2) check <style> blocks inside HTML files as well as .css files.",
   {},
   async () => {
     const changes = [...pending.values()];
