@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "typeset": {
+      "command": "node",
+      "args": ["/Users/chrisgrady/conductor/workspaces/typeset/kyiv/mcp-server/index.js"]
+    }
+  }
+}
