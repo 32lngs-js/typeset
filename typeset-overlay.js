@@ -194,7 +194,7 @@
               <button class="version-btn" id="versionBtn"><span id="versionLabel">V1</span>${CHEV}</button>
               <div class="version-menu" id="versionMenu"></div>
             </div>
-            <button class="icon-btn pick-btn active" id="pickBtn" title="Pick an element">${CROSS}</button>
+            <button class="icon-btn pick-btn active" id="pickBtn" title="Select mode — click elements to edit. Toggle off to use the page (Esc).">${CROSS}</button>
             <button class="copy-btn" id="copyBtn" title="Copy CSS">${COPY}</button>
             <button class="icon-btn" id="themeBtn" title="Toggle theme">${THEME}</button>
             <button class="icon-btn" id="minBtn" title="Minimize">${MINI}</button>
@@ -473,14 +473,16 @@
   function onPU(e) {
     if (!mDown) return;
     mDown = false; marquee.style.display = 'none';
+    // Select-mode is PERSISTENT: a plain click switches the selection but stays
+    // in select-mode so you can keep clicking element to element. Toggle it off
+    // with the crosshair button (or Esc) when you want to use the page normally.
     if (mMoved && picking) {
       const l = Math.min(mx0, e.clientX), t = Math.min(my0, e.clientY), r = Math.max(mx0, e.clientX), b = Math.max(my0, e.clientY);
       const hits = elementsInRect(l, t, r, b);
       if (hits.length) setSelection(mShift ? [...new Set([...selection, ...hits])] : hits);
-      setPicking(false);
     } else if (!mMoved) {
       const el = document.elementFromPoint(e.clientX, e.clientY);
-      if (pickable(el)) { selectEl(el, mShift); if (!mShift) setPicking(false); }
+      if (pickable(el)) selectEl(el, mShift);
     }
     hoverBox.style.display = 'none';
   }
