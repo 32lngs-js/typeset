@@ -8,6 +8,18 @@ When you tell an agent "make the heading a bit bigger," it picks a number. Maybe
 
 TypeSet is that scrubber. You interact with the live element, in the real page, until the value feels right. Then you copy the CSS and hand it to the agent — or to Agentation, which packages it with the selector and file context so the agent can apply it exactly once, correctly.
 
+## Who this is for
+
+There used to be a clear path for designers who cared about the details: learn enough CSS to tweak values directly, or open Chrome's inspector, find the element, edit the computed style, and see it update live. It was not elegant but it worked. The designer stayed in control of the value, the browser gave instant feedback, and the result was as precise as their eye.
+
+That path assumed a designer who could read and write a little code, or at minimum navigate DevTools without fear. A large share of the people building products today cannot do that, and increasingly do not need to — they use agents for implementation. These are not hobbyists or early adopters. They are a distinct and growing class of builder: product-minded, design-literate, shipping real things, and entirely reliant on agents to translate their intent into code.
+
+For this class of builder, design is not a nice-to-have. It is often the primary differentiator. A polished product built without a single line of hand-written code is entirely achievable; a sloppy product is not forgiven because an AI wrote it. Users do not see the stack. They see the type, the spacing, the weight, the rhythm. If it looks like it was generated and left unchecked, that is what they remember.
+
+The problem is that the old path — edit CSS directly, see it live — is closed to them. And the new path — describe what you want to an agent, get an implementation back — loses resolution at exactly the layer where design lives. The agent's guess at "a bit tighter" is not their eye. And they cannot open DevTools to correct it.
+
+TypeSet is built for this gap. It gives a designer-class sensory interface to someone who does not write CSS — drag a label, watch the type change, stop when it looks right, copy the output. No inspector, no field editing, no hypothesis formation. Just the judgment, the result, and a value precise enough to hand off.
+
 ## Why high-resolution detail still requires a human
 
 There is a class of design decision that cannot be delegated to an agent, not because the agent lacks capability, but because the decision has no specification. It is not resolvable by logic. It is resolved by looking.
