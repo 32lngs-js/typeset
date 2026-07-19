@@ -529,6 +529,18 @@
             </div>
           </div>
 
+          <div class="section-head"><span>Layout</span></div>
+          <div class="sl-row">
+            <div class="ts-slider" data-prop="maxWidth" data-min="40" data-max="1600" data-step="1">
+              <div class="ts-slider-hashmarks"></div>
+              <div class="ts-slider-fill"></div>
+              <div class="ts-slider-handle"></div>
+              <span class="ts-slider-label">Width</span>
+              <span class="ts-slider-value" id="vW">—</span>
+              <input class="ts-slider-input" id="iW" type="number" min="40" max="1600" step="1">
+            </div>
+          </div>
+
           <div class="section-head"><span>Family</span></div>
           <div class="font-picker" id="fontPicker">
             <button class="font-trigger" id="fontTrigger" type="button">
@@ -596,6 +608,7 @@
         fontFamily:    active.style.fontFamily,
         textAlign:     active.style.textAlign,
         transform:     active.style.transform,
+        maxWidth:      active.style.maxWidth,
         txX, txY,
       };
     }
@@ -617,6 +630,7 @@
       el.style.fontFamily    = snap.fontFamily;
       el.style.textAlign     = snap.textAlign;
       el.style.transform     = snap.transform;
+      el.style.maxWidth      = snap.maxWidth;
       txX = snap.txX; txY = snap.txY;
       if (active && active.dataset.id === snap.id) syncFrom(el);
       saveCurrentVersion();
@@ -635,7 +649,7 @@
         const changed = !!(
           s.fontFamily || s.fontSize || s.fontWeight ||
           s.lineHeight || s.letterSpacing || s.textAlign ||
-          (s.transform && s.transform !== 'none')
+          s.maxWidth || (s.transform && s.transform !== 'none')
         );
         const badge = document.querySelector(`.change-badge[data-for="${el.dataset.id}"]`);
         if (!badge) return;
@@ -805,6 +819,7 @@
           fontFamily:    el.style.fontFamily,
           textAlign:     el.style.textAlign,
           transform:     el.style.transform,
+          maxWidth:      el.style.maxWidth,
         };
       });
       return snap;
@@ -822,6 +837,7 @@
         el.style.fontFamily    = s.fontFamily     || '';
         el.style.textAlign     = s.textAlign      || '';
         el.style.transform     = s.transform      || '';
+        el.style.maxWidth      = s.maxWidth       || '';
       });
     }
 
@@ -948,6 +964,7 @@
       if (prop === 'lineHeight')    return (+v).toFixed(2);
       if (prop === 'letterSpacing') return (+v).toFixed(3) + 'em';
       if (prop === 'translateX' || prop === 'translateY') return Math.round(v) + 'px';
+      if (prop === 'maxWidth') return Math.round(v) + 'px';
       return v;
     }
 
@@ -1133,6 +1150,7 @@
       const ls   = Math.round((lsPx / fsz) * 1000) / 1000;
       const mat  = new DOMMatrix(cs.transform);
       txX = Math.round(mat.m41); txY = Math.round(mat.m42);
+      const wid  = cs.maxWidth === 'none' ? Math.round(parseFloat(cs.width)) : Math.round(parseFloat(cs.maxWidth));
 
       $('vSize').textContent   = Math.round(fsz) + 'px';
       $('vWeight').textContent = parseInt(cs.fontWeight) || 400;
@@ -1140,6 +1158,7 @@
       $('vLS').textContent     = ls.toFixed(3) + 'em';
       $('vX').textContent      = txX + 'px';
       $('vY').textContent      = txY + 'px';
+      $('vW').textContent      = wid + 'px';
 
       updateRowTrack('fontSize',      fsz);
       updateRowTrack('fontWeight',    parseInt(cs.fontWeight) || 400);
@@ -1147,6 +1166,7 @@
       updateRowTrack('letterSpacing', ls);
       updateRowTrack('translateX',    txX);
       updateRowTrack('translateY',    txY);
+      updateRowTrack('maxWidth',      wid);
 
       setFontUI(cs.fontFamily);
       document.querySelectorAll('.align-btn').forEach(b =>
@@ -1163,6 +1183,7 @@
       if (prop === 'letterSpacing') return Math.round(((cs.letterSpacing === 'normal' ? 0 : parseFloat(cs.letterSpacing)) / fsz) * 1000) / 1000;
       if (prop === 'translateX')    return txX;
       if (prop === 'translateY')    return txY;
+      if (prop === 'maxWidth')      return cs.maxWidth === 'none' ? Math.round(parseFloat(cs.width)) : Math.round(parseFloat(cs.maxWidth));
       return 0;
     }
 
@@ -1174,6 +1195,7 @@
       if (prop === 'letterSpacing') active.style.letterSpacing = val + 'em';
       if (prop === 'translateX')   { txX = val; active.style.transform = `translate(${txX}px,${txY}px)`; }
       if (prop === 'translateY')   { txY = val; active.style.transform = `translate(${txX}px,${txY}px)`; }
+      if (prop === 'maxWidth')      active.style.maxWidth       = val + 'px';
       updateRowTrack(prop, val);
       saveCurrentVersion();
     }
@@ -1271,6 +1293,7 @@
       active.style.fontFamily = '';
       active.style.textAlign = '';
       active.style.transform = '';
+      active.style.maxWidth = '';
       txX = 0; txY = 0;
       syncFrom(active);
       saveCurrentVersion();
@@ -1289,6 +1312,7 @@
           s.lineHeight                        && `line-height: ${s.lineHeight};`,
           s.letterSpacing                     && `letter-spacing: ${s.letterSpacing};`,
           s.textAlign                         && `text-align: ${s.textAlign};`,
+          s.maxWidth                          && `max-width: ${s.maxWidth};`,
           s.transform && s.transform !== 'none' && `transform: ${s.transform};`,
         ].filter(Boolean);
 

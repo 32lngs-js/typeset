@@ -209,6 +209,8 @@
             <div class="section-head"><span>Position</span></div>
             ${slider('translateX','X',-400,400,1,'0px')}
             ${slider('translateY','Y',-400,400,1,'0px')}
+            <div class="section-head"><span>Layout</span></div>
+            ${slider('maxWidth','Width',40,1600,1,'—')}
             <div class="section-head"><span>Family</span></div>
             <div class="font-picker" id="fontPicker">
               <button class="font-trigger" id="fontTrigger" type="button">
@@ -255,14 +257,14 @@
     if (!active) return null;
     const s = active.style;
     return { el: active, fontSize: s.fontSize, fontWeight: s.fontWeight, lineHeight: s.lineHeight,
-             letterSpacing: s.letterSpacing, fontFamily: s.fontFamily, textAlign: s.textAlign, transform: s.transform, txX, txY };
+             letterSpacing: s.letterSpacing, fontFamily: s.fontFamily, textAlign: s.textAlign, transform: s.transform, maxWidth: s.maxWidth, txX, txY };
   }
   function pushUndo() { const s = snap(); if (s) undoStack.push(s); }
   function popUndo() {
     const s = undoStack.pop(); if (!s) return;
     const el = s.el;
     el.style.fontSize = s.fontSize; el.style.fontWeight = s.fontWeight; el.style.lineHeight = s.lineHeight;
-    el.style.letterSpacing = s.letterSpacing; el.style.fontFamily = s.fontFamily; el.style.textAlign = s.textAlign; el.style.transform = s.transform;
+    el.style.letterSpacing = s.letterSpacing; el.style.fontFamily = s.fontFamily; el.style.textAlign = s.textAlign; el.style.transform = s.transform; el.style.maxWidth = s.maxWidth;
     if (active === el) { txX = s.txX; txY = s.txY; syncFrom(el); }
     saveCurrentVersion(); positionSelBox();
   }
@@ -272,7 +274,7 @@
   let currentVersionIdx = 0;
   const badgeNodes = [];  // {el, node}
 
-  const emptySnap = el => ({ el, fontSize: '', fontWeight: '', lineHeight: '', letterSpacing: '', fontFamily: '', textAlign: '', transform: '' });
+  const emptySnap = el => ({ el, fontSize: '', fontWeight: '', lineHeight: '', letterSpacing: '', fontFamily: '', textAlign: '', transform: '', maxWidth: '' });
   // As new elements are touched, backfill every existing version with an empty
   // snapshot so switching to an OLDER version correctly clears them.
   function trackEdited(el) {
@@ -282,11 +284,11 @@
   }
   function captureAllStyles() {
     return [...edited].map(el => ({ el, fontSize: el.style.fontSize, fontWeight: el.style.fontWeight, lineHeight: el.style.lineHeight,
-      letterSpacing: el.style.letterSpacing, fontFamily: el.style.fontFamily, textAlign: el.style.textAlign, transform: el.style.transform }));
+      letterSpacing: el.style.letterSpacing, fontFamily: el.style.fontFamily, textAlign: el.style.textAlign, transform: el.style.transform, maxWidth: el.style.maxWidth }));
   }
   function applyAllStyles(arr) {
     arr.forEach(o => { const s = o.el.style; s.fontSize = o.fontSize; s.fontWeight = o.fontWeight; s.lineHeight = o.lineHeight;
-      s.letterSpacing = o.letterSpacing; s.fontFamily = o.fontFamily; s.textAlign = o.textAlign; s.transform = o.transform; });
+      s.letterSpacing = o.letterSpacing; s.fontFamily = o.fontFamily; s.textAlign = o.textAlign; s.transform = o.transform; s.maxWidth = o.maxWidth; });
   }
   function saveCurrentVersion() { versions[currentVersionIdx].styles = captureAllStyles(); updateBadges(); }
   function switchVersion(idx) {
@@ -311,7 +313,7 @@
   $('versionBtn').addEventListener('click', e => { e.stopPropagation(); $('versionMenu').classList.toggle('open'); });
   root.addEventListener('click', e => { if (!e.target.closest('#versionWrap')) closeVersionMenu(); });
 
-  const isChanged = el => { const s = el.style; return !!(s.fontFamily || s.fontSize || s.fontWeight || s.lineHeight || s.letterSpacing || s.textAlign || (s.transform && s.transform !== 'none')); };
+  const isChanged = el => { const s = el.style; return !!(s.fontFamily || s.fontSize || s.fontWeight || s.lineHeight || s.letterSpacing || s.textAlign || s.maxWidth || (s.transform && s.transform !== 'none')); };
   function updateBadges() {
     badgeNodes.forEach(b => b.node.remove()); badgeNodes.length = 0;
     let i = 0;
@@ -503,7 +505,7 @@
     if (prop === 'fontWeight') return Math.round(v);
     if (prop === 'lineHeight') return (+v).toFixed(2);
     if (prop === 'letterSpacing') return (+v).toFixed(3) + 'em';
-    return Math.round(v) + 'px';
+    return Math.round(v) + 'px';   // fontSize / translateX / translateY / maxWidth
   }
   const vEl = prop => root.querySelector(`.ts-slider-value[data-v="${prop}"]`);
   function syncFrom(el) {
@@ -512,15 +514,18 @@
     const lsPx = cs.letterSpacing === 'normal' ? 0 : parseFloat(cs.letterSpacing);
     const ls = Math.round((lsPx / fsz) * 1000) / 1000;
     const mat = new DOMMatrix(cs.transform); txX = Math.round(mat.m41); txY = Math.round(mat.m42);
+    const wid = cs.maxWidth === 'none' ? Math.round(parseFloat(cs.width)) : Math.round(parseFloat(cs.maxWidth));
     vEl('fontSize').textContent = Math.round(fsz) + 'px';
     vEl('fontWeight').textContent = parseInt(cs.fontWeight) || 400;
     vEl('lineHeight').textContent = lh.toFixed(2);
     vEl('letterSpacing').textContent = ls.toFixed(3) + 'em';
     vEl('translateX').textContent = txX + 'px';
     vEl('translateY').textContent = txY + 'px';
+    vEl('maxWidth').textContent = wid + 'px';
     updateRowTrack('fontSize', fsz); updateRowTrack('fontWeight', parseInt(cs.fontWeight) || 400);
     updateRowTrack('lineHeight', lh); updateRowTrack('letterSpacing', ls);
     updateRowTrack('translateX', txX); updateRowTrack('translateY', txY);
+    updateRowTrack('maxWidth', wid);
     setFontUI(cs.fontFamily);
     root.querySelectorAll('.align-btn').forEach(b => b.classList.toggle('active', b.dataset.align === cs.textAlign));
   }
@@ -533,6 +538,7 @@
     if (prop === 'letterSpacing') return Math.round(((cs.letterSpacing === 'normal' ? 0 : parseFloat(cs.letterSpacing)) / fsz) * 1000) / 1000;
     if (prop === 'translateX') return txX;
     if (prop === 'translateY') return txY;
+    if (prop === 'maxWidth') return cs.maxWidth === 'none' ? Math.round(parseFloat(cs.width)) : Math.round(parseFloat(cs.maxWidth));
     return 0;
   }
   function applyProp(prop, val) {
@@ -543,6 +549,7 @@
     if (prop === 'letterSpacing') active.style.letterSpacing = val + 'em';
     if (prop === 'translateX') { txX = val; active.style.transform = `translate(${txX}px,${txY}px)`; }
     if (prop === 'translateY') { txY = val; active.style.transform = `translate(${txX}px,${txY}px)`; }
+    if (prop === 'maxWidth') active.style.maxWidth = val + 'px';
     trackEdited(active);
     updateRowTrack(prop, val); saveCurrentVersion(); positionSelBox();
   }
@@ -603,7 +610,7 @@
   }));
   resetBtn.addEventListener('click', () => {
     if (!active) return; pushUndo();
-    ['fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'fontFamily', 'textAlign', 'transform'].forEach(p => active.style[p] = '');
+    ['fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'fontFamily', 'textAlign', 'transform', 'maxWidth'].forEach(p => active.style[p] = '');
     txX = 0; txY = 0; syncFrom(active); saveCurrentVersion(); positionSelBox();
   });
 
@@ -629,6 +636,7 @@
         s.lineHeight && `line-height: ${s.lineHeight};`,
         s.letterSpacing && `letter-spacing: ${s.letterSpacing};`,
         s.textAlign && `text-align: ${s.textAlign};`,
+        s.maxWidth && `max-width: ${s.maxWidth};`,
         s.transform && s.transform !== 'none' && `transform: ${s.transform};`,
       ].filter(Boolean);
       if (lines.length) blocks.push(`${cssSelector(el)} {\n  ${lines.join('\n  ')}\n}`);
