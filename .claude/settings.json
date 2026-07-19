@@ -2,7 +2,10 @@
   "mcpServers": {
     "typeset": {
       "command": "npx",
-      "args": ["typeset-mcp"]
+      "args": ["-y", "typeset-mcp"],
+      "env": {
+        "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+      }
     }
   }
 }

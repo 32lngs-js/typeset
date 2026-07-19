@@ -2,17 +2,39 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { createServer } from "http";
+import { readFileSync, writeFileSync } from "fs";
+import { join } from "path";
 import { z } from "zod";
 
 const PORT = parseInt(process.env.TYPESET_PORT || "8800");
+const PENDING_FILE = join(process.cwd(), ".typeset-pending.json");
 
 let changeId = 0;
 const pending = new Map();
 let server;
 
+try {
+  const saved = JSON.parse(readFileSync(PENDING_FILE, "utf8"));
+  for (const c of saved) {
+    pending.set(c.id, c);
+    if (c.id >= changeId) changeId = c.id;
+  }
+  if (pending.size) process.stderr.write(`TypeSet MCP: loaded ${pending.size} pending change(s) from ${PENDING_FILE}\n`);
+} catch (e) {
+  // File missing or unreadable — start fresh
+}
+
+function savePending() {
+  try {
+    writeFileSync(PENDING_FILE, JSON.stringify([...pending.values()], null, 2));
+  } catch (e) {
+    process.stderr.write(`TypeSet MCP: failed to write ${PENDING_FILE}: ${e.message}\n`);
+  }
+}
+
 const mcp = new McpServer({
   name: "typeset",
-  version: "0.1.0",
+  version: "0.1.3",
 });
 
 mcp.resource(
@@ -30,7 +52,7 @@ mcp.resource(
 
 mcp.tool(
   "get_pending_changes",
-  "List all CSS changes committed from the TypeSet browser overlay that haven't been applied yet. Each change has a selector (e.g. 'h1.display'), property, and value. To locate the CSS rule: (1) search by the class portion of the selector — e.g. for 'h1.display' search for '.display' — since rules often use class-only selectors; (2) check <style> blocks inside HTML files as well as .css files.",
+  "List all CSS changes committed from the TypeSet browser overlay that haven't been applied yet. Each change has a selector (e.g. 'h1.display'), property, and value. To locate the CSS rule: (1) search by the class portion of the selector — e.g. for 'h1.display' search for '.display' — since rules often use class-only selectors; (2) check <style> blocks inside HTML files as well as .css files. Fallback when MCP tools are unavailable: read .typeset-pending.json in the project root, or GET http://127.0.0.1:8800/changes.",
   {},
   async () => {
     const changes = [...pending.values()];
@@ -50,6 +72,7 @@ mcp.tool(
     const change = pending.get(id);
     if (!change) return { content: [{ type: "text", text: `Change ${id} not found (already applied or rejected).` }] };
     pending.delete(id);
+    savePending();
     return { content: [{ type: "text", text: `Applied: ${change.selector} { ${change.property}: ${change.value}; }` }] };
   }
 );
@@ -62,13 +85,14 @@ mcp.tool(
     const change = pending.get(id);
     if (!change) return { content: [{ type: "text", text: `Change ${id} not found.` }] };
     pending.delete(id);
+    savePending();
     return { content: [{ type: "text", text: `Rejected: ${change.selector} { ${change.property}: ${change.value}; }` }] };
   }
 );
 
 const httpServer = createServer((req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") { res.writeHead(204); res.end(); return; }
@@ -85,6 +109,7 @@ const httpServer = createServer((req, res) => {
           pending.set(id, { id, selector: c.selector, property: c.property, value: c.value, previousValue: c.previousValue || null, timestamp: Date.now() });
           committed.push(id);
         }
+        savePending();
         server?.notification({ method: "notifications/resources/updated", params: { uri: "typeset://pending-changes" } });
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ ok: true, ids: committed }));
@@ -93,6 +118,12 @@ const httpServer = createServer((req, res) => {
         res.end(JSON.stringify({ error: e.message }));
       }
     });
+    return;
+  }
+
+  if (req.method === "GET" && req.url === "/changes") {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify([...pending.values()], null, 2));
     return;
   }
 
