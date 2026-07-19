@@ -17,14 +17,17 @@ const CLAUDE_MD_SECTION = `
 ${CLAUDE_MD_MARKER_START}
 ## TypeSet — Live Typography Editing
 
-TypeSet MCP tools are installed (\`get_pending_changes\`, \`apply_typeset_change\`, \`reject_typeset_change\`).
+TypeSet MCP tools are installed (\`get_pending_changes\`, \`apply_typeset_change\`, \`reject_typeset_change\`, \`set_typeset_project\`).
 
-**When starting any frontend project:** ensure this script tag is in the HTML (remove before shipping):
+**When adding TypeSet to a page (so THIS chat owns its changes):**
+1. Run \`pwd\` to get the project root.
+2. Add this script tag to the HTML (remove before shipping), with \`data-project\` set to that path:
 \`\`\`html
-<script src="https://32lngs-js.github.io/typeset/typeset-overlay.js"></script>
+<script src="https://32lngs-js.github.io/typeset/typeset-overlay.js" data-project="<pwd>"></script>
 \`\`\`
+3. Call \`set_typeset_project\` with the same path. This binds edits from that page to this session, so parallel workspaces don't collide.
 
-**When \`notifications/resources/updated\` fires from typeset:** immediately call \`get_pending_changes\`. For each pending change, find the CSS rule by searching for the class portion of the selector (e.g. \`h1.display\` → search for \`.display\`) in \`<style>\` blocks and \`.css\` files. Write the new value, then call \`apply_typeset_change\` with the change ID.
+**When \`notifications/resources/updated\` fires from typeset:** immediately call \`get_pending_changes\` (it returns only this session's changes). For each pending change, find the CSS rule by searching for the class portion of the selector (e.g. \`h1.display\` → search for \`.display\`) in \`<style>\` blocks and \`.css\` files. Write the new value, then call \`apply_typeset_change\` with the change ID. Skip no-op changes where the value already equals the previous value.
 ${CLAUDE_MD_MARKER_END}`;
 
 // --- CLI (install / uninstall) ---
@@ -41,7 +44,17 @@ function writePending(changes) {
   writeFileSync(PENDING_FILE, JSON.stringify(changes, null, 2));
 }
 
-const mcp = new McpServer({ name: "typeset", version: "0.1.8" });
+// The project this session is bound to (via set_typeset_project, or the TYPESET_PROJECT env).
+// When set, the session only surfaces/reacts to changes tagged with this project, so parallel
+// workspaces don't fight over the same overlay commits. Null means see everything (backward compat).
+let scopedProject = process.env.TYPESET_PROJECT || null;
+
+function pendingForSession() {
+  const all = readPending();
+  return scopedProject ? all.filter(c => c.project === scopedProject) : all;
+}
+
+const mcp = new McpServer({ name: "typeset", version: "0.1.9" });
 
 mcp.resource(
   "pending-changes",
@@ -51,7 +64,7 @@ mcp.resource(
     contents: [{
       uri: "typeset://pending-changes",
       mimeType: "application/json",
-      text: JSON.stringify(readPending(), null, 2),
+      text: JSON.stringify(pendingForSession(), null, 2),
     }],
   })
 );
@@ -61,7 +74,7 @@ mcp.tool(
   "List all CSS changes committed from the TypeSet browser overlay that haven't been applied yet. Each change has a selector (e.g. 'h1.display'), property, and value. To locate the CSS rule: (1) search by the class portion of the selector — e.g. for 'h1.display' search for '.display' — since rules often use class-only selectors; (2) check <style> blocks inside HTML files as well as .css files. Fallback when MCP tools are unavailable: read ~/.typeset-pending.json, or GET http://127.0.0.1:8800/changes.",
   {},
   async () => {
-    const changes = readPending();
+    const changes = pendingForSession();
     if (!changes.length) return { content: [{ type: "text", text: "No pending changes." }] };
     const summary = changes.map(c =>
       `[${c.id}] ${c.selector} { ${c.property}: ${c.previousValue} → ${c.value}; }`
@@ -96,13 +109,26 @@ mcp.tool(
   }
 );
 
+mcp.tool(
+  "set_typeset_project",
+  "Bind this session to a project so it only receives TypeSet changes from that project's page. Call this when you add the TypeSet overlay to a page, passing the same absolute path you set as the overlay's data-project attribute (usually your working directory). Pass an empty string to unbind and see all changes again.",
+  { project: z.string().describe("Absolute project path to bind to (must match the overlay's data-project); empty string to unbind") },
+  async ({ project }) => {
+    scopedProject = project && project.trim() ? project.trim() : null;
+    if (!scopedProject) return { content: [{ type: "text", text: "Unbound. This session now sees all pending TypeSet changes." }] };
+    const n = pendingForSession().length;
+    return { content: [{ type: "text", text: `Bound to project: ${scopedProject} (${n} pending change${n === 1 ? "" : "s"} for this session).` }] };
+  }
+);
+
 const transport = new StdioServerTransport();
 const server = await mcp.connect(transport);
 
 watch(homedir(), { persistent: false }, (_, filename) => {
-  if (filename === ".typeset-pending.json") {
-    server.notification({ method: "notifications/resources/updated", params: { uri: "typeset://pending-changes" } });
-  }
+  if (filename !== ".typeset-pending.json") return;
+  // Only wake this session if the change concerns its bound project (or it's unbound).
+  if (scopedProject && !readPending().some(c => c.project === scopedProject)) return;
+  server.notification({ method: "notifications/resources/updated", params: { uri: "typeset://pending-changes" } });
 });
 
 // --- install / uninstall helpers ---
@@ -112,8 +138,16 @@ function plistPath() {
 
 function addToClaudeMd() {
   let content = existsSync(CLAUDE_MD) ? readFileSync(CLAUDE_MD, "utf8") : "";
-  if (content.includes(CLAUDE_MD_MARKER_START)) return;
-  writeFileSync(CLAUDE_MD, content + "\n" + CLAUDE_MD_SECTION + "\n");
+  const section = CLAUDE_MD_SECTION.trim();
+  const start = content.indexOf(CLAUDE_MD_MARKER_START);
+  const end = content.indexOf(CLAUDE_MD_MARKER_END);
+  if (start !== -1 && end !== -1) {
+    // Replace the existing section in place so instruction updates propagate on reinstall.
+    content = content.slice(0, start) + section + content.slice(end + CLAUDE_MD_MARKER_END.length);
+  } else {
+    content = content.trim() ? content.trimEnd() + "\n\n" + section + "\n" : section + "\n";
+  }
+  writeFileSync(CLAUDE_MD, content);
 }
 
 function removeFromClaudeMd() {

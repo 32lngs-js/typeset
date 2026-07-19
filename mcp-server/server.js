@@ -47,7 +47,10 @@ const httpServer = createServer((req, res) => {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   if (req.method === "OPTIONS") { res.writeHead(204); res.end(); return; }
 
-  if (req.method === "POST" && req.url === "/commit") {
+  const url = new URL(req.url, "http://localhost");
+  const path = url.pathname;
+
+  if (req.method === "POST" && path === "/commit") {
     let body = "";
     req.on("data", chunk => { body += chunk; });
     req.on("end", () => {
@@ -57,7 +60,7 @@ const httpServer = createServer((req, res) => {
         const committed = [];
         for (const c of Array.isArray(incoming) ? incoming : [incoming]) {
           const id = ++changeId;
-          changes.push({ id, selector: c.selector, property: c.property, value: c.value, previousValue: c.previousValue || null, timestamp: Date.now() });
+          changes.push({ id, selector: c.selector, property: c.property, value: c.value, previousValue: c.previousValue || null, project: c.project || null, timestamp: Date.now() });
           committed.push(id);
         }
         writeChanges(changes);
@@ -71,14 +74,17 @@ const httpServer = createServer((req, res) => {
     return;
   }
 
-  if (req.method === "GET" && req.url === "/changes") {
+  if (req.method === "GET" && path === "/changes") {
+    const project = url.searchParams.get("project");
+    const all = readChanges();
+    const scoped = project ? all.filter(c => c.project === project) : all;
     res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify(readChanges(), null, 2));
+    res.end(JSON.stringify(scoped, null, 2));
     return;
   }
 
   // DELETE /changes/:id — mark a change as applied (fallback when MCP tools unavailable)
-  const applyMatch = req.url?.match(/^\/changes\/(\d+)$/);
+  const applyMatch = path.match(/^\/changes\/(\d+)$/);
   if (req.method === "DELETE" && applyMatch) {
     const id = parseInt(applyMatch[1]);
     const changes = readChanges();
@@ -90,9 +96,12 @@ const httpServer = createServer((req, res) => {
     return;
   }
 
-  if (req.method === "GET" && req.url === "/health") {
+  if (req.method === "GET" && path === "/health") {
+    const project = url.searchParams.get("project");
+    const all = readChanges();
+    const pending = project ? all.filter(c => c.project === project).length : all.length;
     res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ ok: true, pending: readChanges().length, port: PORT }));
+    res.end(JSON.stringify({ ok: true, pending, port: PORT }));
     return;
   }
 
