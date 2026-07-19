@@ -1,8 +1,28 @@
 {
-  "name": "typeset-mcp-server",
+  "name": "typeset-mcp",
   "version": "0.1.0",
+  "description": "MCP server that bridges the TypeSet browser overlay to coding agents — live CSS changes flow from browser to agent without copy-paste",
   "type": "module",
-  "bin": "index.js",
+  "bin": {
+    "typeset-mcp": "index.js"
+  },
+  "files": [
+    "index.js"
+  ],
+  "keywords": [
+    "mcp",
+    "typography",
+    "css",
+    "claude",
+    "model-context-protocol",
+    "devtools"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/32lngs-js/typeset.git",
+    "directory": "mcp-server"
+  },
+  "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.1"
   }

@@ -105,6 +105,14 @@ const httpServer = createServer((req, res) => {
   res.writeHead(404); res.end("Not found");
 });
 
+httpServer.on("error", (err) => {
+  if (err.code === "EADDRINUSE") {
+    process.stderr.write(`TypeSet MCP: port ${PORT} already in use. Set TYPESET_PORT to use a different port.\n`);
+    process.exit(1);
+  }
+  throw err;
+});
+
 httpServer.listen(PORT, "127.0.0.1", () => {
   process.stderr.write(`TypeSet MCP: HTTP on http://127.0.0.1:${PORT}\n`);
 });
