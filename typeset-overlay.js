@@ -36,7 +36,7 @@
     #panel {
       --bg:#212121; --bg-hover:rgba(255,255,255,0.1); --border:rgba(255,255,255,0.1);
       --border-sub:rgba(255,255,255,0.06); --text-hi:rgba(255,255,255,0.95);
-      --text-mid:rgba(255,255,255,0.7); --text-lo:rgba(255,255,255,0.4); --hint-col:rgba(255,255,255,0.7);
+      --text-mid:rgba(255,255,255,0.7); --text-lo:rgba(255,255,255,0.4); --hint-col:rgba(255,255,255,0.92);
       --text-val:rgba(255,255,255,0.7); --chip-bg:rgba(255,255,255,0.07);
       --chip-bdr:rgba(255,255,255,0.06); --chip-hover:rgba(255,255,255,0.12);
       --sel-bg:rgba(255,255,255,0.05); --sel-bdr:rgba(255,255,255,0.1); --sel-col:rgba(255,255,255,0.7);
@@ -49,7 +49,7 @@
       --sl-hash:rgba(255,255,255,0.15); --sl-handle:rgba(255,255,255,0.95); --radius:8px;
       --accent:#0066ff;
       position:fixed; width:260px; background:var(--bg); border:1px solid var(--border); border-radius:14px;
-      box-shadow:0 8px 32px var(--shadow);
+      box-shadow:0 8px 32px var(--shadow); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
       overflow:visible; z-index:2147483647; user-select:none; right:20px; top:20px;
       font-family:system-ui,-apple-system,'SF Pro Display',sans-serif;   /* like DialKit */
       transition:width .34s cubic-bezier(.32,.72,0,1),height .34s cubic-bezier(.32,.72,0,1),
@@ -57,11 +57,11 @@
         border-radius .3s cubic-bezier(.32,.72,0,1),background .2s ease,box-shadow .28s ease;
     }
     #panel.panel-dragging { transition:none; }
-    .panel-inner { width:260px; opacity:1; transition:opacity .16s ease; padding:10px 12px 0; }
+    .panel-inner { width:260px; opacity:1; transition:opacity .16s ease; padding:10px 12px 0; overflow-y:auto; max-height:calc(100vh - 40px); }
 
     #panel.panel-light {
-      --bg:#fafafa; --bg-hover:rgba(0,0,0,0.08); --border:rgba(0,0,0,0.1); --border-sub:rgba(0,0,0,0.06);
-      --text-hi:rgba(0,0,0,0.9); --text-mid:rgba(0,0,0,0.6); --text-lo:rgba(0,0,0,0.35); --text-val:rgba(0,0,0,0.6); --hint-col:rgba(0,0,0,0.6);
+      --bg:rgba(250,250,249,0.82); --bg-hover:rgba(0,0,0,0.08); --border:rgba(0,0,0,0.1); --border-sub:rgba(0,0,0,0.06);
+      --text-hi:rgba(0,0,0,0.9); --text-mid:rgba(0,0,0,0.6); --text-lo:rgba(0,0,0,0.35); --text-val:rgba(0,0,0,0.6); --hint-col:rgba(0,0,0,0.88);
       --chip-bg:rgba(0,0,0,0.06); --chip-bdr:rgba(0,0,0,0.06); --chip-hover:rgba(0,0,0,0.1);
       --sel-bg:rgba(0,0,0,0.04); --sel-bdr:rgba(0,0,0,0.1); --sel-col:rgba(0,0,0,0.6);
       --ab-bg:rgba(0,0,0,0.04); --ab-bdr:rgba(0,0,0,0.1); --ab-col:rgba(0,0,0,0.35);
@@ -76,11 +76,12 @@
     #panel.minimized:active { cursor:grabbing; }
     #panel.minimized .panel-inner { opacity:0; pointer-events:none; }
     .dial-icon { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+      padding-top:1px;
       opacity:0; transition:opacity .14s ease; pointer-events:none; color:var(--dial-icon);
       font-family:'DM Serif Display','Playfair Display',Georgia,serif; font-size:19px; font-weight:400; line-height:1; }
     #panel.minimized .dial-icon { opacity:1; }
 
-    .ph { display:flex; align-items:center; justify-content:space-between; padding:12px 0 6px; cursor:grab; margin-bottom:12px; border-bottom:1px solid var(--border-sub); }
+    .ph { display:flex; align-items:center; justify-content:space-between; padding:0 0 8px; cursor:grab; margin-bottom:12px; border-bottom:1px solid var(--border-sub); }
     .ph:active { cursor:grabbing; }
     .ph-title { font-size:15px; font-weight:600; color:var(--text-hi); letter-spacing:-0.01em; }
     .ph-right { display:flex; align-items:center; gap:5px; }
@@ -127,12 +128,18 @@
     .ts-badge:hover { transform:translate(-50%,-50%) scale(1.1); }
     .ts-badge svg { width:10px; height:10px; }
 
-    .pb { overflow-y:auto; max-height:calc(100vh - 160px); position:relative; }
-    .select-hint { font-size:13px; color:var(--hint-col); text-align:center; letter-spacing:0.02em; display:none; }
+    .pb { overflow-y:visible; max-height:none; position:relative; }
+    .select-hint { font-size:14px; color:var(--hint-col); text-align:center; letter-spacing:0.02em; display:none; }
     .select-hint.visible { display:block; position:absolute; left:0; right:0; top:50%; transform:translateY(-50%); padding:0 12px; z-index:5; }
-    .section-head { display:flex; align-items:center; justify-content:space-between; height:44px; padding:0; border-top:1px solid var(--border-sub); }
-    .section-head:first-child { border-top:none; }
-    .section-head span { font-size:15px; font-weight:600; line-height:20px; color:var(--text-hi); letter-spacing:-0.01em; }
+    /* Section folders — copied from DialKit data-multiple="true" mode */
+    .section { margin:0; padding-bottom:0; border-top:1px solid var(--border-sub); border-bottom:none; }
+    .section:first-child { border-top:none; margin-top:0; }
+    .section-head { display:flex; align-items:center; justify-content:space-between; height:44px; padding:0; cursor:pointer; user-select:none; }
+    .section-head span { font-size:14px; font-weight:600; line-height:20px; color:var(--text-mid); letter-spacing:-0.01em; transform:translateY(-0.5px); transition:color .15s; }
+    .section-head:hover span { color:var(--text-hi); }
+    .section-chev { width:20px; height:20px; padding:2px; box-sizing:border-box; color:var(--text-mid); opacity:0.6; flex-shrink:0; }
+    .section-content { overflow:hidden; }
+    .section-content-inner { display:flex; flex-direction:column; gap:6px; padding-top:4px; padding-bottom:12px; }
     .row { display:flex; align-items:center; padding:4px 10px; gap:8px; min-height:36px; }
 
     .style-seg { display:flex; padding:0; gap:0; }
@@ -154,7 +161,7 @@
     .reset-btn:hover { background:rgba(255,60,60,0.13); color:rgba(255,120,120,0.9); }
 
     .sl-row { padding:0; }
-    #controls { display:flex; flex-direction:column; gap:6px; transition:opacity .15s; }
+    #controls { display:flex; flex-direction:column; gap:0; transition:opacity .15s; }
     #controls.disabled { opacity:0.22; pointer-events:none; }
     .ts-slider { position:relative; height:36px; background:var(--sl-track); border-radius:var(--radius); overflow:hidden; cursor:pointer; touch-action:none; user-select:none; }
     .ts-slider.snapping { transition:width .34s cubic-bezier(.22,1,.36,1),transform .34s cubic-bezier(.22,1,.36,1); }
@@ -209,9 +216,13 @@
 
   const COPY ='<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M8 6C8 4.343 9.343 3 11 3h2c1.657 0 3 1.343 3 3v1H8V6z" stroke="currentColor" stroke-width="1.5"/><path d="M16 5h1c1.657 0 3 1.343 3 3v3M8 5H7c-1.657 0-3 1.343-3 3v10c0 1.657 1.343 3 3 3h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M19.24 16.19l-.7-1.81a.5.5 0 00-.93 0l-.7 1.81a1.5 1.5 0 01-.87.88l-1.81.7a.5.5 0 000 .93l1.81.7c.26.1.47.32.57.57l.7 1.81a.5.5 0 00.93 0l.7-1.81c.1-.26.32-.47.57-.57l1.81-.7a.5.5 0 000-.93l-1.81-.7a1.5 1.5 0 01-.57-.57z" fill="currentColor"/></svg>';
   const ADDV = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h6M15 15h6M18 12v6M4 18h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
-  const THEME = '<svg width="11" height="11" viewBox="0 0 11 11" fill="none"><circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" stroke-width="1"/><path d="M5.5 1 A4.5 4.5 0 0 0 5.5 10 Z" fill="currentColor"/></svg>';
+  const EYE_OPEN = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4.91516 12.7108C4.63794 12.2883 4.63705 11.7565 4.91242 11.3328C5.84146 9.9033 8.30909 6.74994 12 6.74994C15.6909 6.74994 18.1585 9.9033 19.0876 11.3328C19.3629 11.7565 19.3621 12.2883 19.0848 12.7108C18.1537 14.13 15.6873 17.2499 12 17.2499C8.31272 17.2499 5.8463 14.13 4.91516 12.7108Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 14.25C13.2426 14.25 14.25 13.2426 14.25 12C14.25 10.7574 13.2426 9.75 12 9.75C10.7574 9.75 9.75 10.7574 9.75 12C9.75 13.2426 10.7574 14.25 12 14.25Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const EYE_CLOSED = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M18.6025 9.28503C18.9174 8.9701 19.4364 8.99481 19.7015 9.35271C20.1484 9.95606 20.4943 10.507 20.7342 10.9199C21.134 11.6086 21.1329 12.4454 20.7303 13.1328C20.2144 14.013 19.2151 15.5225 17.7723 16.8193C16.3293 18.1162 14.3852 19.2497 12.0008 19.25C11.4192 19.25 10.8638 19.1823 10.3355 19.0613C9.77966 18.934 9.63498 18.2525 10.0382 17.8493C10.2412 17.6463 10.5374 17.573 10.8188 17.6302C11.1993 17.7076 11.5935 17.75 12.0008 17.75C13.8848 17.7497 15.4867 16.8568 16.7693 15.7041C18.0522 14.5511 18.9606 13.1867 19.4363 12.375C19.5656 12.1543 19.5659 11.8943 19.4373 11.6729C19.2235 11.3049 18.921 10.8242 18.5364 10.3003C18.3085 9.98991 18.3302 9.5573 18.6025 9.28503ZM12.0008 4.75C12.5814 4.75006 13.1358 4.81803 13.6632 4.93953C14.2182 5.06741 14.362 5.74812 13.9593 6.15091C13.7558 6.35435 13.4589 6.42748 13.1771 6.36984C12.7983 6.29239 12.4061 6.25006 12.0008 6.25C10.1167 6.25 8.51415 7.15145 7.23028 8.31543C5.94678 9.47919 5.03918 10.8555 4.56426 11.6729C4.43551 11.8945 4.43582 12.1542 4.56524 12.375C4.77587 12.7343 5.07189 13.2012 5.44718 13.7105C5.67623 14.0213 5.65493 14.4552 5.38193 14.7282C5.0671 15.0431 4.54833 15.0189 4.28292 14.6614C3.84652 14.0736 3.50813 13.5369 3.27129 13.1328C2.86831 12.4451 2.86717 11.6088 3.26739 10.9199C3.78185 10.0345 4.77959 8.51239 6.22247 7.2041C7.66547 5.89584 9.61202 4.75 12.0008 4.75Z" fill="currentColor"/><path d="M5 19L19 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+  const THEME_DARK = '<svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M15.5 10.4955C15.4037 11.5379 15.0124 12.5314 14.3721 13.3596C13.7317 14.1878 12.8688 14.8165 11.8841 15.1722C10.8995 15.5278 9.83397 15.5957 8.81217 15.3679C7.79038 15.1401 6.8546 14.6259 6.11434 13.8857C5.37408 13.1454 4.85995 12.2096 4.63211 11.1878C4.40427 10.166 4.47215 9.10048 4.82781 8.11585C5.18346 7.13123 5.81218 6.26825 6.64039 5.62791C7.4686 4.98756 8.46206 4.59634 9.5045 4.5C8.89418 5.32569 8.60049 6.34302 8.67685 7.36695C8.75321 8.39087 9.19454 9.35339 9.92058 10.0794C10.6466 10.8055 11.6091 11.2468 12.6331 11.3231C13.657 11.3995 14.6743 11.1058 15.5 10.4955Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const THEME_LIGHT = '<svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M9.99999 12.7082C11.4958 12.7082 12.7083 11.4956 12.7083 9.99984C12.7083 8.50407 11.4958 7.2915 9.99999 7.2915C8.50422 7.2915 7.29166 8.50407 7.29166 9.99984C7.29166 11.4956 8.50422 12.7082 9.99999 12.7082Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 3.9585V5.057M10 14.943V16.041M5.727 5.727L6.507 6.506M13.493 13.493L14.273 14.273M3.958 10H5.057M14.943 10H16.042M5.727 14.273L6.507 13.493M13.493 6.506L14.273 5.727" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const MINI = '<svg width="10" height="2" viewBox="0 0 10 2" fill="none"><rect width="10" height="1.5" rx="0.75" fill="currentColor"/></svg>';
   const CHEV = '<svg class="chev" width="8" height="5" viewBox="0 0 8 5" fill="none"><path d="M1 1l3 3 3-3" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const CHEV_SEC = '<svg class="section-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
 
   const slider = (prop, label, min, max, step, val) => `
     <div class="sl-row"><div class="ts-slider" data-prop="${prop}" data-min="${min}" data-max="${max}" data-step="${step}">
@@ -227,7 +238,8 @@
         <div class="ph" id="dragHandle">
           <span class="ph-title">TypeSet</span>
           <div class="ph-right">
-            <button class="icon-btn" id="themeBtn" title="Toggle theme">${THEME}</button>
+            <button class="icon-btn" id="badgeToggleBtn" title="Toggle badges">${EYE_OPEN}</button>
+            <button class="icon-btn" id="themeBtn" title="Toggle theme">${THEME_DARK}</button>
             <button class="icon-btn" id="minBtn" title="Minimize">${MINI}</button>
           </div>
         </div>
@@ -242,37 +254,57 @@
           </div>
           <div class="select-hint visible" id="selectHint">Select text to edit</div>
           <div id="controls" class="disabled">
-            <div class="section-head"><span>Typography</span></div>
-            ${slider('fontSize','Size',8,120,0.5,'—')}
-            ${slider('fontWeight','Weight',100,900,100,'—')}
-            ${slider('lineHeight','Line Height',0.8,3.0,0.05,'—')}
-            ${slider('letterSpacing','Spacing',-0.1,0.4,0.005,'—')}
-            <div class="section-head"><span>Position</span></div>
-            ${slider('translateX','X',-400,400,1,'0px')}
-            ${slider('translateY','Y',-400,400,1,'0px')}
-            <div class="section-head"><span>Layout</span></div>
-            ${slider('maxWidth','Width',40,1600,1,'—')}
-            ${slider('padding','Padding',0,80,1,'—')}
-            ${slider('borderRadius','Radius',0,50,1,'—')}
-            ${slider('opacity','Opacity',0,100,1,'—')}
-            <div class="section-head"><span>Font</span></div>
-            <div class="font-picker" id="fontPicker">
-              <button class="font-trigger" id="fontTrigger" type="button">
-                <span class="font-trigger-name" id="fontTriggerName">—</span>${CHEV}
-              </button>
-              <div class="font-list" id="fontList"></div>
+            <div class="section">
+              <div class="section-head" data-sec="typography"><span>Typography</span>${CHEV_SEC}</div>
+              <div class="section-content" id="sec-typography"><div class="section-content-inner">
+                ${slider('fontSize','Size',8,120,0.5,'—')}
+                ${slider('fontWeight','Weight',100,900,100,'—')}
+                ${slider('lineHeight','Line Height',0.8,3.0,0.05,'—')}
+                ${slider('letterSpacing','Spacing',-0.1,0.4,0.005,'—')}
+              </div></div>
             </div>
-            <div class="style-seg">
-              <button class="style-btn" data-style="italic" title="Italic"><svg width="12" height="14" viewBox="0 0 12 14" fill="none"><line x1="4" y1="13" x2="8" y2="1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="2" y1="13" x2="7" y2="13" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="5" y1="1" x2="10" y2="1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button>
-              <button class="style-btn" data-style="bold" title="Bold"><svg width="12" height="14" viewBox="-1 -1 13 16" fill="none"><path d="M1 1h4.5a2.5 2.5 0 010 5H1V1zM1 6h5a3 3 0 010 6H1V6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></button>
-              <button class="style-btn" data-style="underline" title="Underline"><svg width="12" height="14" viewBox="0 0 12 14" fill="none"><path d="M2 1v5a4 4 0 008 0V1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="1" y1="13" x2="11" y2="13" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button>
+            <div class="section">
+              <div class="section-head" data-sec="position"><span>Position</span>${CHEV_SEC}</div>
+              <div class="section-content" id="sec-position"><div class="section-content-inner">
+                ${slider('translateX','X',-400,400,1,'0px')}
+                ${slider('translateY','Y',-400,400,1,'0px')}
+              </div></div>
             </div>
-            <div class="section-head"><span>Align</span></div>
-            <div class="align-seg">
-              <button class="align-btn" data-align="left" title="Left"><svg width="12" height="10" viewBox="0 0 12 10" fill="none"><line x1="0" y1="1" x2="12" y2="1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="0" y1="5" x2="8.4" y2="5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="0" y1="9" x2="6.6" y2="9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
-              <button class="align-btn" data-align="center" title="Center"><svg width="12" height="10" viewBox="0 0 12 10" fill="none"><line x1="0" y1="1" x2="12" y2="1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="1.8" y1="5" x2="10.2" y2="5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="2.7" y1="9" x2="9.3" y2="9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
-              <button class="align-btn" data-align="right" title="Right"><svg width="12" height="10" viewBox="0 0 12 10" fill="none"><line x1="0" y1="1" x2="12" y2="1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="3.6" y1="5" x2="12" y2="5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="5.4" y1="9" x2="12" y2="9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
-              <button class="align-btn" data-align="justify" title="Justify"><svg width="12" height="10" viewBox="0 0 12 10" fill="none"><line x1="0" y1="1" x2="12" y2="1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="0" y1="5" x2="12" y2="5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="0" y1="9" x2="7.2" y2="9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+            <div class="section">
+              <div class="section-head" data-sec="layout"><span>Layout</span>${CHEV_SEC}</div>
+              <div class="section-content" id="sec-layout"><div class="section-content-inner">
+                ${slider('maxWidth','Width',40,1600,1,'—')}
+                ${slider('padding','Padding',0,80,1,'—')}
+                ${slider('borderRadius','Radius',0,50,1,'—')}
+                ${slider('opacity','Opacity',0,100,1,'—')}
+              </div></div>
+            </div>
+            <div class="section">
+              <div class="section-head" data-sec="font"><span>Font</span>${CHEV_SEC}</div>
+              <div class="section-content" id="sec-font"><div class="section-content-inner">
+                <div class="font-picker" id="fontPicker">
+                  <button class="font-trigger" id="fontTrigger" type="button">
+                    <span class="font-trigger-name" id="fontTriggerName">—</span>${CHEV}
+                  </button>
+                  <div class="font-list" id="fontList"></div>
+                </div>
+                <div class="style-seg">
+                  <button class="style-btn" data-style="italic" title="Italic"><svg width="12" height="14" viewBox="0 0 12 14" fill="none"><line x1="4" y1="13" x2="8" y2="1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="2" y1="13" x2="7" y2="13" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="5" y1="1" x2="10" y2="1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button>
+                  <button class="style-btn" data-style="bold" title="Bold"><svg width="12" height="14" viewBox="-1 -1 13 16" fill="none"><path d="M1 1h4.5a2.5 2.5 0 010 5H1V1zM1 6h5a3 3 0 010 6H1V6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></button>
+                  <button class="style-btn" data-style="underline" title="Underline"><svg width="12" height="14" viewBox="0 0 12 14" fill="none"><path d="M2 1v5a4 4 0 008 0V1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="1" y1="13" x2="11" y2="13" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></button>
+                </div>
+              </div></div>
+            </div>
+            <div class="section">
+              <div class="section-head" data-sec="align"><span>Align</span>${CHEV_SEC}</div>
+              <div class="section-content" id="sec-align"><div class="section-content-inner">
+                <div class="align-seg">
+                  <button class="align-btn" data-align="left" title="Left"><svg width="12" height="10" viewBox="0 0 12 10" fill="none"><line x1="0" y1="1" x2="12" y2="1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="0" y1="5" x2="8.4" y2="5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="0" y1="9" x2="6.6" y2="9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+                  <button class="align-btn" data-align="center" title="Center"><svg width="12" height="10" viewBox="0 0 12 10" fill="none"><line x1="0" y1="1" x2="12" y2="1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="1.8" y1="5" x2="10.2" y2="5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="2.7" y1="9" x2="9.3" y2="9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+                  <button class="align-btn" data-align="right" title="Right"><svg width="12" height="10" viewBox="0 0 12 10" fill="none"><line x1="0" y1="1" x2="12" y2="1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="3.6" y1="5" x2="12" y2="5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="5.4" y1="9" x2="12" y2="9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+                  <button class="align-btn" data-align="justify" title="Justify"><svg width="12" height="10" viewBox="0 0 12 10" fill="none"><line x1="0" y1="1" x2="12" y2="1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="0" y1="5" x2="12" y2="5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="0" y1="9" x2="7.2" y2="9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+                </div>
+              </div></div>
             </div>
             <div class="reset-row"><button class="reset-btn" id="resetBtn">Reset</button></div>
           </div>
@@ -428,6 +460,7 @@
         if (group && m.els.length) setSelection(m.els.filter(x => document.contains(x)));
         else selectEl(el);
       });
+      if (!badgesVisible) node.style.display = 'none';
       root.appendChild(node); badgeNodes.push({ el, node });
     });
     positionBadges();
@@ -450,7 +483,26 @@
     const top = clamp(iconY, 8, Math.max(8, window.innerHeight - h - 8));
     panel.style.right = 'auto'; panel.style.left = left + 'px'; panel.style.top = top + 'px';
   }
-  function resyncHeight() { if (!minimized) panel.style.height = panelInner.offsetHeight + 'px'; }
+  function resyncHeight() {
+    if (minimized) return;
+    const h = Math.min(panelInner.scrollHeight, window.innerHeight - 32);
+    panel.style.height = h + 'px';
+  }
+  // ResizeObserver drives panel height frame-by-frame during section toggling.
+  // Suppress CSS height transition while sections animate so the RO can drive it directly.
+  let sectionAnimating = 0;
+  const panelRO = new ResizeObserver(() => {
+    if (minimized) return;
+    if (sectionAnimating > 0) {
+      panel.style.transition = 'none';
+      resyncHeight();
+      panel.offsetHeight;
+      panel.style.transition = '';
+    } else {
+      resyncHeight();
+    }
+  });
+  panelRO.observe(panelInner);
   function expand() {
     if (!minimized) return;
     originX = computeOrigin(); panel.dataset.originX = originX;
@@ -496,7 +548,101 @@
   panel.addEventListener('pointercancel', () => { pDrag = false; panel.classList.remove('panel-dragging'); });
   panel.addEventListener('click', () => { if (suppressClick) return; if (minimized) expand(); });
   minBtn.addEventListener('click', e => { e.stopPropagation(); collapse(); });
-  themeBtn.addEventListener('click', e => { e.stopPropagation(); panel.classList.toggle('panel-light'); });
+  themeBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    const isLight = panel.classList.toggle('panel-light');
+    themeBtn.innerHTML = isLight ? THEME_DARK : THEME_LIGHT;
+  });
+
+  let badgesVisible = true;
+  const badgeToggleBtn = root.getElementById('badgeToggleBtn');
+  badgeToggleBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    badgesVisible = !badgesVisible;
+    badgeToggleBtn.innerHTML = badgesVisible ? EYE_OPEN : EYE_CLOSED;
+    badgeNodes.forEach(b => { b.node.style.display = badgesVisible ? '' : 'none'; });
+  });
+
+  // Spring physics — ported from motion/react (node_modules/motion/dist/motion.dev.js).
+  // Matches DialKit's spring({ visualDuration, bounce }) exactly.
+  function springKeyframes(from, to, visualDuration, bounce, steps) {
+    steps = steps || 60;
+    const mass = 1;
+    const dampingRatio = Math.max(0.05, Math.min(1, 1 - bounce));
+    // motion's visualDuration→stiffness/damping conversion (line ~1199 of motion.dev.js)
+    const root = (2 * Math.PI) / (visualDuration * 1.2);
+    const stiffness = root * root;
+    const damping = 2 * dampingRatio * Math.sqrt(stiffness * mass);
+    // motion's underdamped spring solver (line ~1275 of motion.dev.js)
+    const initialDelta = to - from;
+    const undampedAngularFreq = Math.sqrt(stiffness / mass) / 1000; // motion uses ms internally
+    const angularFreq = undampedAngularFreq * Math.sqrt(1 - dampingRatio * dampingRatio);
+    const initialVelocity = 0;
+    const A = (initialVelocity + dampingRatio * undampedAngularFreq * initialDelta) / angularFreq;
+    const resolveSpring = (t) => {
+      const envelope = Math.exp(-dampingRatio * undampedAngularFreq * t);
+      return to - envelope * (A * Math.sin(angularFreq * t) + initialDelta * Math.cos(angularFreq * t));
+    };
+    // Find settle time (when oscillation < 0.5px of target)
+    let totalDurMs = visualDuration * 1000 * 2;
+    for (let t = totalDurMs; t < 5000; t += 16) {
+      if (Math.abs(resolveSpring(t) - to) < 0.5) { totalDurMs = t; break; }
+    }
+    const frames = [];
+    for (let i = 0; i <= steps; i++) {
+      const t = (i / steps) * totalDurMs;
+      frames.push(resolveSpring(t));
+    }
+    frames[frames.length - 1] = to;
+    return { frames, duration: totalDurMs };
+  }
+
+  // Section collapse/expand — spring animations matching DialKit
+  root.querySelectorAll('.section-head[data-sec]').forEach(head => {
+    head.addEventListener('click', e => {
+      if (e.target.closest('.icon-btn')) return;
+      const content = root.getElementById('sec-' + head.dataset.sec);
+      const isOpen = !head.classList.contains('collapsed');
+      head.classList.toggle('collapsed', isOpen);
+      content.getAnimations().forEach(a => { try { a.commitStyles(); } catch(e){} a.cancel(); });
+
+      // Animate chevron with spring { visualDuration: 0.35, bounce: 0.15 }
+      const chev = head.querySelector('.section-chev');
+      chev.getAnimations().forEach(a => a.cancel());
+      const chevFrom = isOpen ? 0 : -180, chevTo = isOpen ? -180 : 0;
+      const chevSpring = springKeyframes(chevFrom, chevTo, 0.35, 0.15);
+      chev.animate(
+        chevSpring.frames.map(v => ({ transform: `rotate(${v}deg)` })),
+        { duration: chevSpring.duration, fill: 'forwards' }
+      );
+
+      // Animate content with spring { visualDuration: 0.35, bounce: 0.1 }
+      sectionAnimating++;
+      const done = () => { sectionAnimating = Math.max(0, sectionAnimating - 1); };
+      if (isOpen) {
+        const h = content.offsetHeight;
+        const sp = springKeyframes(h, 0, 0.35, 0.1);
+        const anim = content.animate(
+          sp.frames.map((v, i) => ({ height: v + 'px', opacity: String(v / h) })),
+          { duration: sp.duration }
+        );
+        anim.onfinish = () => { content.style.height = '0px'; content.style.opacity = '0'; done(); };
+        anim.oncancel = done;
+      } else {
+        content.style.height = 'auto'; content.style.opacity = '1';
+        const toH = content.scrollHeight;
+        content.style.height = '0px'; content.style.opacity = '0';
+        content.offsetHeight;
+        const sp = springKeyframes(0, toH, 0.35, 0.1);
+        const anim = content.animate(
+          sp.frames.map((v, i) => ({ height: v + 'px', opacity: String(Math.min(1, v / (toH * 0.3))) })),
+          { duration: sp.duration }
+        );
+        anim.onfinish = () => { content.style.height = ''; content.style.opacity = ''; done(); };
+        anim.oncancel = done;
+      }
+    });
+  });
 
   // ── Element picking on the host page ──
   // Select-mode is active whenever the panel is EXPANDED. Minimizing to the dial
