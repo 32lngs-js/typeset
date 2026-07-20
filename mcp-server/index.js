@@ -17,7 +17,7 @@ const CLAUDE_MD_SECTION = `
 ${CLAUDE_MD_MARKER_START}
 ## TypeSet — Live Typography Editing
 
-TypeSet routes each browser edit to the chat that owns its project, keyed on the project's absolute path, so you can iterate across many pages and workspaces at once without them colliding. Tools: \`get_pending_changes\`, \`apply_typeset_change\`, \`reject_typeset_change\`, \`set_typeset_project\`.
+TypeSet routes each browser edit to the chat that owns its project, keyed on the project's absolute path, so you can iterate across many pages and workspaces at once without them colliding. Tools: \`get_pending_changes\`, \`apply_typeset_change\`, \`reject_typeset_change\`, \`set_typeset_project\`, \`watch_typeset_changes\`.
 
 **Bind this chat to its workspace — do this once, as early as you touch TypeSet in a session:** run \`pwd\`, then call \`set_typeset_project\` with that path. This chat now only receives edits from that workspace. You do NOT need the user to say "add typeset"; bind on your own the first time TypeSet is relevant.
 
@@ -26,7 +26,9 @@ TypeSet routes each browser edit to the chat that owns its project, keyed on the
 <script src="https://32lngs-js.github.io/typeset/typeset-overlay.js" data-project="<pwd>"></script>
 \`\`\`
 
-**When \`notifications/resources/updated\` fires from typeset:** if you have not bound yet this session, bind first (\`pwd\` → \`set_typeset_project\`). Then call \`get_pending_changes\` — it returns only this workspace's edits. For each, find the CSS rule by the class portion of the selector (e.g. \`h1.display\` → search for \`.display\`) in \`<style>\` blocks and \`.css\` files, write the new value, and call \`apply_typeset_change\`. Skip any change whose value already matches the file.
+**Applying an edit:** find the CSS rule by the class portion of the selector (e.g. \`h1.display\` → search for \`.display\`) in \`<style>\` blocks and \`.css\` files (for Tailwind, change the utility class on the element), write the new value, then call \`apply_typeset_change\`. Skip any change whose value already matches the file.
+
+**Watch mode (hands-free, the default way to run):** as soon as the user is scrubbing and wants edits applied live, call \`watch_typeset_changes\` in a loop. It blocks until edits arrive (returning immediately if some are already pending), then returns a batch; apply each as above, then call \`watch_typeset_changes\` again. This lets the user keep scrubbing and see every Copy applied without re-prompting the chat. Keep looping until the user says stop. Do not rely on \`notifications/resources/updated\` to wake you; watch mode is the trigger.
 ${CLAUDE_MD_MARKER_END}`;
 
 // --- CLI (install / uninstall) ---
@@ -53,7 +55,13 @@ function pendingForSession() {
   return scopedProject ? all.filter(c => c.project === scopedProject) : all;
 }
 
-const mcp = new McpServer({ name: "typeset", version: "0.1.10" });
+function summarize(changes) {
+  return changes.map(c =>
+    `[${c.id}] ${c.selector} { ${c.property}: ${c.previousValue} → ${c.value}; }${c.project ? `  (project: ${c.project})` : ""}`
+  ).join("\n");
+}
+
+const mcp = new McpServer({ name: "typeset", version: "0.1.11" });
 
 mcp.resource(
   "pending-changes",
@@ -75,10 +83,7 @@ mcp.tool(
   async () => {
     const changes = pendingForSession();
     if (!changes.length) return { content: [{ type: "text", text: "No pending changes." }] };
-    const summary = changes.map(c =>
-      `[${c.id}] ${c.selector} { ${c.property}: ${c.previousValue} → ${c.value}; }${c.project ? `  (project: ${c.project})` : ""}`
-    ).join("\n");
-    return { content: [{ type: "text", text: summary }] };
+    return { content: [{ type: "text", text: summarize(changes) }] };
   }
 );
 
@@ -117,6 +122,34 @@ mcp.tool(
     if (!scopedProject) return { content: [{ type: "text", text: "Unbound. This session now sees all pending TypeSet changes." }] };
     const n = pendingForSession().length;
     return { content: [{ type: "text", text: `Bound to project: ${scopedProject} (${n} pending change${n === 1 ? "" : "s"} for this session).` }] };
+  }
+);
+
+mcp.tool(
+  "watch_typeset_changes",
+  "Hands-free mode: block until TypeSet edits are available for this session, then return them as a batch (returns immediately if edits are already pending). Call this in a loop — apply each returned change (write the file, then call apply_typeset_change), then call watch_typeset_changes again — so the user can scrub in the browser and see edits applied live without re-prompting. On timeout it returns a 'no edits yet' note; just call it again to keep watching. Stop when the user says so.",
+  { timeoutSeconds: z.number().optional().describe("Max seconds to block before returning empty (default 50; kept under the MCP client timeout, so loop).") },
+  async ({ timeoutSeconds }) => {
+    const timeoutMs = Math.max(1, Math.min(timeoutSeconds || 50, 110)) * 1000;
+    return await new Promise((resolve) => {
+      let done = false;
+      const finish = (text) => {
+        if (done) return;
+        done = true;
+        try { watcher.close(); } catch {}
+        clearInterval(poll);
+        clearTimeout(timer);
+        resolve({ content: [{ type: "text", text }] });
+      };
+      const check = () => {
+        const changes = pendingForSession();
+        if (changes.length) finish(summarize(changes));
+      };
+      const watcher = watch(homedir(), { persistent: false }, (_, f) => { if (f === ".typeset-pending.json") check(); });
+      const poll = setInterval(check, 1000);
+      const timer = setTimeout(() => finish("No new TypeSet edits within the timeout. Call watch_typeset_changes again to keep watching, or stop if the user is done."), timeoutMs);
+      check();
+    });
   }
 );
 
