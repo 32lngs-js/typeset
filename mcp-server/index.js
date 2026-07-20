@@ -26,9 +26,9 @@ TypeSet routes each browser edit to the chat that owns its project, keyed on the
 <script src="https://32lngs-js.github.io/typeset/typeset-overlay.js" data-project="<pwd>"></script>
 \`\`\`
 
-**Applying an edit:** find the CSS rule by the class portion of the selector (e.g. \`h1.display\` → search for \`.display\`) in \`<style>\` blocks and \`.css\` files (for Tailwind, change the utility class on the element), write the new value, then call \`apply_typeset_change\`. Skip any change whose value already matches the file.
+**Applying an edit:** each change is a selector, a property, and a target \`value\`; make that property equal \`value\` in the SOURCE. Locate it: for normal CSS, search the class portion of the selector (e.g. \`h1.display\` → \`.display\`) in \`<style>\` blocks and \`.css\` files; for Tailwind the value lives in a utility class ON the element and the selector contains it — a selector with \`text-[30px]\` means \`class="... text-[30px] ..."\`, so change that class to e.g. \`text-[20.5px]\`. Decide whether to write by reading the source: if it already holds \`value\`, skip; otherwise write \`value\`. Do NOT judge this from any before/after numbers (TypeSet reports the browser's computed state, which does not reflect the source and often already equals the target). Only call \`apply_typeset_change\` once the file actually holds \`value\`.
 
-**Watch mode (hands-free, the default way to run):** as soon as the user is scrubbing and wants edits applied live, call \`watch_typeset_changes\` in a loop. It blocks until edits arrive (returning immediately if some are already pending), then returns a batch; apply each as above, then call \`watch_typeset_changes\` again. This lets the user keep scrubbing and see every Copy applied without re-prompting the chat. Keep looping until the user says stop. Do not rely on \`notifications/resources/updated\` to wake you; watch mode is the trigger.
+**Watch mode (hands-free, the default way to run):** as soon as the user is scrubbing and wants edits applied live, call \`watch_typeset_changes\` in a loop. It blocks until edits arrive (returning immediately if some are already pending), then returns a batch; apply each as above, then call \`watch_typeset_changes\` again. This lets the user keep scrubbing and see every Copy applied without re-prompting the chat. Keep looping until the user says stop. If a \`watch_typeset_changes\` call returns "no edits yet" or errors with a connection close, that is normal for a long wait — just call it again. Do not rely on \`notifications/resources/updated\` to wake you; watch mode is the trigger.
 ${CLAUDE_MD_MARKER_END}`;
 
 // --- CLI (install / uninstall) ---
@@ -56,12 +56,14 @@ function pendingForSession() {
 }
 
 function summarize(changes) {
+  // Show only the TARGET value. previousValue is the browser's computed state, not the
+  // source file value, so a "from → to" display is misleading (often reads as a no-op).
   return changes.map(c =>
-    `[${c.id}] ${c.selector} { ${c.property}: ${c.previousValue} → ${c.value}; }${c.project ? `  (project: ${c.project})` : ""}`
+    `[${c.id}] ${c.selector} { ${c.property}: ${c.value}; }${c.project ? `  (project: ${c.project})` : ""}`
   ).join("\n");
 }
 
-const mcp = new McpServer({ name: "typeset", version: "0.1.11" });
+const mcp = new McpServer({ name: "typeset", version: "0.1.12" });
 
 mcp.resource(
   "pending-changes",
@@ -128,9 +130,9 @@ mcp.tool(
 mcp.tool(
   "watch_typeset_changes",
   "Hands-free mode: block until TypeSet edits are available for this session, then return them as a batch (returns immediately if edits are already pending). Call this in a loop — apply each returned change (write the file, then call apply_typeset_change), then call watch_typeset_changes again — so the user can scrub in the browser and see edits applied live without re-prompting. On timeout it returns a 'no edits yet' note; just call it again to keep watching. Stop when the user says so.",
-  { timeoutSeconds: z.number().optional().describe("Max seconds to block before returning empty (default 50; kept under the MCP client timeout, so loop).") },
+  { timeoutSeconds: z.number().optional().describe("Max seconds to block before returning empty (default 25; kept under the MCP client's tool-call timeout, so loop).") },
   async ({ timeoutSeconds }) => {
-    const timeoutMs = Math.max(1, Math.min(timeoutSeconds || 50, 110)) * 1000;
+    const timeoutMs = Math.max(1, Math.min(timeoutSeconds || 25, 55)) * 1000;
     return await new Promise((resolve) => {
       let done = false;
       const finish = (text) => {
