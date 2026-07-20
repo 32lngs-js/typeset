@@ -17,17 +17,16 @@ const CLAUDE_MD_SECTION = `
 ${CLAUDE_MD_MARKER_START}
 ## TypeSet — Live Typography Editing
 
-TypeSet MCP tools are installed (\`get_pending_changes\`, \`apply_typeset_change\`, \`reject_typeset_change\`, \`set_typeset_project\`).
+TypeSet routes each browser edit to the chat that owns its project, keyed on the project's absolute path, so you can iterate across many pages and workspaces at once without them colliding. Tools: \`get_pending_changes\`, \`apply_typeset_change\`, \`reject_typeset_change\`, \`set_typeset_project\`.
 
-**When adding TypeSet to a page (so THIS chat owns its changes):**
-1. Run \`pwd\` to get the project root.
-2. Add this script tag to the HTML (remove before shipping), with \`data-project\` set to that path:
+**Bind this chat to its workspace — do this once, as early as you touch TypeSet in a session:** run \`pwd\`, then call \`set_typeset_project\` with that path. This chat now only receives edits from that workspace. You do NOT need the user to say "add typeset"; bind on your own the first time TypeSet is relevant.
+
+**Tag the page once per project:** the overlay script tag must carry \`data-project\` set to that same \`pwd\` (this is what routes the page's edits to this chat, and it persists in the HTML). Add the tag if missing, or add the attribute if an older tag lacks it (remove before shipping):
 \`\`\`html
 <script src="https://32lngs-js.github.io/typeset/typeset-overlay.js" data-project="<pwd>"></script>
 \`\`\`
-3. Call \`set_typeset_project\` with the same path. This binds edits from that page to this session, so parallel workspaces don't collide.
 
-**When \`notifications/resources/updated\` fires from typeset:** immediately call \`get_pending_changes\` (it returns only this session's changes). For each pending change, find the CSS rule by searching for the class portion of the selector (e.g. \`h1.display\` → search for \`.display\`) in \`<style>\` blocks and \`.css\` files. Write the new value, then call \`apply_typeset_change\` with the change ID. Skip no-op changes where the value already equals the previous value.
+**When \`notifications/resources/updated\` fires from typeset:** if you have not bound yet this session, bind first (\`pwd\` → \`set_typeset_project\`). Then call \`get_pending_changes\` — it returns only this workspace's edits. For each, find the CSS rule by the class portion of the selector (e.g. \`h1.display\` → search for \`.display\`) in \`<style>\` blocks and \`.css\` files, write the new value, and call \`apply_typeset_change\`. Skip any change whose value already matches the file.
 ${CLAUDE_MD_MARKER_END}`;
 
 // --- CLI (install / uninstall) ---
@@ -54,7 +53,7 @@ function pendingForSession() {
   return scopedProject ? all.filter(c => c.project === scopedProject) : all;
 }
 
-const mcp = new McpServer({ name: "typeset", version: "0.1.9" });
+const mcp = new McpServer({ name: "typeset", version: "0.1.10" });
 
 mcp.resource(
   "pending-changes",
@@ -77,7 +76,7 @@ mcp.tool(
     const changes = pendingForSession();
     if (!changes.length) return { content: [{ type: "text", text: "No pending changes." }] };
     const summary = changes.map(c =>
-      `[${c.id}] ${c.selector} { ${c.property}: ${c.previousValue} → ${c.value}; }`
+      `[${c.id}] ${c.selector} { ${c.property}: ${c.previousValue} → ${c.value}; }${c.project ? `  (project: ${c.project})` : ""}`
     ).join("\n");
     return { content: [{ type: "text", text: summary }] };
   }
