@@ -42,3 +42,11 @@ Decision: position drags are no longer queued as typography changes (transforms 
 ## Daemon lives in the npx cache (fragility to fix)
 
 The launchd daemon is pointed at the `server.js` inside whichever npx cache directory `install` resolved. Clearing the npm cache (`~/.npm/_npx`) therefore breaks the daemon until the next `install`. This is acceptable for now, but the clean fix is for `install` to copy `server.js` to a stable location (for example `~/.typeset/server.js`) and point launchd there, so the daemon does not depend on an ephemeral cache path.
+
+## Auto-bind: the chat claims its project without a ritual (v0.1.10)
+
+v0.1.9 tied binding (`set_typeset_project`) to the phrase "add typeset to the page." But the overlay script tag persists in the HTML, so on a later session there is no natural "add" moment and exclusive ownership silently never happens. Worse, an overlay added before the routing feature carries no `data-project`, so its edits are tagged by page origin (e.g. `http://localhost:5177`) instead of the workspace path, and a chat scoped to the path never matches them.
+
+Decision: binding is the agent's job, done automatically, not a user ritual. The agent runs `pwd` and calls `set_typeset_project` the first time TypeSet is relevant in a session (including on the first change notification), and it bakes `data-project=<pwd>` into the overlay tag once per project (adding the attribute to an older tag if absent). The token on both sides is the workspace absolute path, so it is stable and unique. `get_pending_changes` now prints each change's project so ownership is legible while a session is still unbound.
+
+This maps onto the real workflows: several pages of one project collapse to one chat (one binding); several projects each route to their own chat; the port or origin is irrelevant because routing is on the path, not the URL. The user never invokes binding. They open a chat per site and the tool keeps them sorted underneath.
