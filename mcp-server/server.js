@@ -59,6 +59,12 @@ const httpServer = createServer((req, res) => {
         const changes = readChanges();
         const committed = [];
         for (const c of Array.isArray(incoming) ? incoming : [incoming]) {
+          // Dedup: drop any pending change for the same selector+property+project, keep the latest value.
+          // Lets watch mode re-commit its full edited state on every settle without piling up duplicates.
+          for (let i = changes.length - 1; i >= 0; i--) {
+            const p = changes[i];
+            if (p.selector === c.selector && p.property === c.property && (p.project || null) === (c.project || null)) changes.splice(i, 1);
+          }
           const id = ++changeId;
           changes.push({ id, selector: c.selector, property: c.property, value: c.value, previousValue: c.previousValue || null, project: c.project || null, timestamp: Date.now() });
           committed.push(id);

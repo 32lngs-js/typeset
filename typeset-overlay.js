@@ -88,6 +88,9 @@
     .icon-btn { width:22px; height:22px; display:flex; align-items:center; justify-content:center; border:none; background:none; cursor:pointer; border-radius:6px; color:var(--icon-col); transition:color .12s,background .12s; }
     .icon-btn:hover { background:var(--bg-hover); color:var(--text-hi); }
     .tb-btn.copied { color:var(--text-mid); }
+    .tb-btn.watching { color:var(--accent); background:var(--bg-hover); }
+    .tb-btn.watching svg circle { animation:ts-live 1.5s ease-in-out infinite; }
+    @keyframes ts-live { 0%,100%{opacity:1} 50%{opacity:.3} }
     .pick-btn.active { background:var(--accent); color:#fff; }
     .pick-btn.active:hover { background:var(--accent); color:#fff; }
 
@@ -221,6 +224,7 @@
   const THEME_DARK = '<svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M15.5 10.4955C15.4037 11.5379 15.0124 12.5314 14.3721 13.3596C13.7317 14.1878 12.8688 14.8165 11.8841 15.1722C10.8995 15.5278 9.83397 15.5957 8.81217 15.3679C7.79038 15.1401 6.8546 14.6259 6.11434 13.8857C5.37408 13.1454 4.85995 12.2096 4.63211 11.1878C4.40427 10.166 4.47215 9.10048 4.82781 8.11585C5.18346 7.13123 5.81218 6.26825 6.64039 5.62791C7.4686 4.98756 8.46206 4.59634 9.5045 4.5C8.89418 5.32569 8.60049 6.34302 8.67685 7.36695C8.75321 8.39087 9.19454 9.35339 9.92058 10.0794C10.6466 10.8055 11.6091 11.2468 12.6331 11.3231C13.657 11.3995 14.6743 11.1058 15.5 10.4955Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const THEME_LIGHT = '<svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M9.99999 12.7082C11.4958 12.7082 12.7083 11.4956 12.7083 9.99984C12.7083 8.50407 11.4958 7.2915 9.99999 7.2915C8.50422 7.2915 7.29166 8.50407 7.29166 9.99984C7.29166 11.4956 8.50422 12.7082 9.99999 12.7082Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 3.9585V5.057M10 14.943V16.041M5.727 5.727L6.507 6.506M13.493 13.493L14.273 14.273M3.958 10H5.057M14.943 10H16.042M5.727 14.273L6.507 13.493M13.493 6.506L14.273 5.727" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const MINI = '<svg width="10" height="2" viewBox="0 0 10 2" fill="none"><rect width="10" height="1.5" rx="0.75" fill="currentColor"/></svg>';
+  const WATCH = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M8.8 8.8a4.5 4.5 0 0 0 0 6.4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M15.2 8.8a4.5 4.5 0 0 1 0 6.4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M6 6a9 9 0 0 0 0 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M18 6a9 9 0 0 1 0 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
   const CHEV = '<svg class="chev" width="8" height="5" viewBox="0 0 8 5" fill="none"><path d="M1 1l3 3 3-3" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const CHEV_SEC = '<svg class="section-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
 
@@ -251,6 +255,7 @@
               <div class="version-menu" id="versionMenu"></div>
             </div>
             <button class="tb-btn" id="copyBtn" title="Copy CSS">${COPY}</button>
+            <button class="tb-btn tb-watch" id="watchBtn" title="Watch mode: apply edits live as you scrub">${WATCH}</button>
           </div>
           <div class="select-hint visible" id="selectHint">Select text to edit</div>
           <div id="controls" class="disabled">
@@ -327,7 +332,7 @@
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
   const panel = $('panel'), panelInner = panel.querySelector('.panel-inner');
   const selectHint = $('selectHint'), controls = $('controls');
-  const copyBtn = $('copyBtn'), resetBtn = $('resetBtn'), themeBtn = $('themeBtn'), minBtn = $('minBtn');
+  const copyBtn = $('copyBtn'), watchBtn = $('watchBtn'), resetBtn = $('resetBtn'), themeBtn = $('themeBtn'), minBtn = $('minBtn');
   const hoverBox = $('hoverBox'), marquee = $('marquee'), hoverLabel = $('hoverLabel'), phTitle = panel.querySelector('.ph-title');
   const fontPicker = $('fontPicker'), fontTrigger = $('fontTrigger'), fontTriggerName = $('fontTriggerName'), fontList = $('fontList');
 
@@ -733,6 +738,7 @@
     currentMark.group = selection.length > 1;
     currentMark.els = selection.slice();
     selection.forEach(el => el.__tsMark = currentMark);
+    maybeAutoCommit();
   }
 
   function updateHint() {
@@ -1056,7 +1062,8 @@
     ['maxWidth', 'max-width'], ['padding', 'padding'], ['borderRadius', 'border-radius'],
     ['opacity', 'opacity'], ['fontStyle', 'font-style'], ['textDecoration', 'text-decoration'],
   ];
-  function triggerCopy() {
+  // Collect the current edited state: blocks (for the clipboard) + mcpChanges (for the agent).
+  function collectChanges() {
     const blocks = [], mcpChanges = [];
     edited.forEach(el => {
       const s = el.style, sel = cssSelector(el), cs = getComputedStyle(el);
@@ -1077,15 +1084,25 @@
       ].filter(Boolean);
       if (lines.length) blocks.push(`${sel} {\n  ${lines.join('\n  ')}\n}`);
       PROP_MAP.forEach(([js, css]) => {
-        // Queue every property the user set inline (that is exactly what they scrubbed).
-        // NOTE: do NOT filter on s[js] !== cs[js] — cs is computed AFTER the inline edit,
-        // so it always equals s[js] and would drop every change. Real no-op detection needs
-        // an original-value snapshot taken at selection time (tracked follow-up).
+        // Queue every property the user set inline (exactly what they scrubbed). The daemon
+        // dedups by selector+property+project, so re-committing full state (watch mode) is safe.
         if (s[js]) mcpChanges.push({ selector: sel, property: css, value: s[js], previousValue: cs[js] || null, project: TS_PROJECT });
       });
-      // Position drags (transform) are intentionally NOT queued as typography changes;
-      // they still appear in the copied CSS block above.
+      // Position drags (transform) are NOT queued as typography changes; they still appear in the copied CSS.
     });
+    return { blocks, mcpChanges };
+  }
+
+  function postChanges(mcpChanges) {
+    if (!mcpChanges.length) return;
+    fetch(`http://127.0.0.1:${MCP_PORT}/commit`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(mcpChanges),
+    }).catch(() => {});
+  }
+
+  function triggerCopy() {
+    const { blocks, mcpChanges } = collectChanges();
     if (!blocks.length) return;
     navigator.clipboard.writeText('/* TypeSet — ' + versions[currentVersionIdx].name + ' */\n\n' + blocks.join('\n\n')).then(() => {
       const orig = copyBtn.innerHTML;
@@ -1093,14 +1110,32 @@
       copyBtn.classList.add('copied');
       setTimeout(() => { copyBtn.innerHTML = orig; copyBtn.classList.remove('copied'); }, 1500);
     });
-    if (mcpChanges.length) {
-      fetch(`http://127.0.0.1:${MCP_PORT}/commit`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(mcpChanges),
-      }).catch(() => {});
-    }
+    postChanges(mcpChanges);
   }
   copyBtn.addEventListener('click', triggerCopy);
+
+  // --- Watch mode: stream edits to the agent live (pairs with the agent's watch_typeset_changes loop) ---
+  let watchMode = localStorage.getItem('ts-watch') === '1';
+  let watchTimer = null;
+  function commitNow() { postChanges(collectChanges().mcpChanges); }
+  // Called from commitMark on every edit; debounced so a continuous scrub commits once when it settles.
+  function maybeAutoCommit() {
+    if (!watchMode) return;
+    clearTimeout(watchTimer);
+    watchTimer = setTimeout(commitNow, 350);
+  }
+  function renderWatch() {
+    watchBtn.classList.toggle('watching', watchMode);
+    watchBtn.title = watchMode ? 'Watch mode ON. Edits apply live; click to stop.' : 'Watch mode: apply edits live as you scrub';
+    copyBtn.style.display = watchMode ? 'none' : '';
+  }
+  watchBtn.addEventListener('click', () => {
+    watchMode = !watchMode;
+    localStorage.setItem('ts-watch', watchMode ? '1' : '0');
+    renderWatch();
+    if (watchMode) commitNow();
+  });
+  renderWatch();
 
   // ── Keyboard ──
   function onKey(e) {
