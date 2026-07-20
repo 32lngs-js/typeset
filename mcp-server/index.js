@@ -63,7 +63,7 @@ function summarize(changes) {
   ).join("\n");
 }
 
-const mcp = new McpServer({ name: "typeset", version: "0.1.12" });
+const mcp = new McpServer({ name: "typeset", version: "0.1.13" });
 
 mcp.resource(
   "pending-changes",

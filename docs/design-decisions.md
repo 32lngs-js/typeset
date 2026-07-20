@@ -66,3 +66,9 @@ The first real watch-mode session surfaced a silent missed write. The change rea
 Decision: the summary now shows only the target `value` (no misleading `from → to`), and the CLAUDE.md tells the agent to decide skip-vs-write by reading the SOURCE, never the payload, and to call `apply_typeset_change` only once the file actually holds the value. Tailwind guidance is now explicit: a selector containing `text-[30px]` means the value is a utility class on the element, so change the class (`text-[20.5px]`), not a CSS rule. This makes the selection-time-snapshot previousValue fix unnecessary for correctness, since the agent no longer consults previousValue at all.
 
 Also surfaced: the watch block dropped the MCP connection (`-32000 Connection closed`) at 50s. Lowered the default to 25s (under the client's tool-call timeout) and told the agent that a connection close during a wait is normal, so it should just call watch again.
+
+## Overlay watch mode: the browser half of hands-free (v0.1.13)
+
+Agent-side watch mode still left the browser needing a manual Copy per change. The overlay now has a watch toggle (a broadcast icon in the toolbar): when ON, finishing an edit auto-commits to the daemon, so the user never clicks Copy. Paired with the agent's `watch_typeset_changes` loop the whole thing is hands-free: scrub, auto-commit, agent applies, HMR. Copy stays as the secondary / no-agent path and hides while watch is live; state persists in localStorage.
+
+Implementation: the auto-commit hooks `commitMark` (the single "an edit changed the selection" signal, so it covers sliders, fonts, and align), debounced 350ms so a continuous scrub commits once when it settles rather than on every frame. Each commit re-posts the full edited state, so the daemon now dedups `/commit` by selector+property+project (keeping the latest value) to stop duplicates piling up.
