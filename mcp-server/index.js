@@ -28,7 +28,7 @@ TypeSet routes each browser edit to the chat that owns its project, keyed on the
 
 **Applying an edit:** each change is a selector, a property, and a target \`value\`; make that property equal \`value\` in the SOURCE. Locate it: for normal CSS, search the class portion of the selector (e.g. \`h1.display\` → \`.display\`) in \`<style>\` blocks and \`.css\` files; for Tailwind the value lives in a utility class ON the element and the selector contains it — a selector with \`text-[30px]\` means \`class="... text-[30px] ..."\`, so change that class to e.g. \`text-[20.5px]\`. Decide whether to write by reading the source: if it already holds \`value\`, skip; otherwise write \`value\`. Do NOT judge this from any before/after numbers (TypeSet reports the browser's computed state, which does not reflect the source and often already equals the target). Only call \`apply_typeset_change\` once the file actually holds \`value\`.
 
-**Watch mode (hands-free): enter it on your own; do NOT wait for the user to type "watch mode".** As soon as the user is doing visual or typography work on a page with the overlay (they mention scrubbing or tweaking type, or edits start arriving), bind, then call \`watch_typeset_changes\` in a loop: it blocks until edits arrive (returning immediately if some are pending), then returns a batch; apply each (see above), then call \`watch_typeset_changes\` again. Each call blocks ~25s and then yields, so if the user sends a message in the meantime, handle it and resume watching if they are still designing. Keep looping until they say stop or switch tasks. A "no edits yet" return or a connection close is normal; just call it again. Do not rely on \`notifications/resources/updated\` to wake you.
+**Watch mode (hands-free): enter it on your own; never make the user type "watch mode".** The trigger is the START of a design session, not the first edit. The moment you spin up or start a dev server for, or open, a page that has the TypeSet overlay, immediately bind (\`pwd\` → \`set_typeset_project\`) and call \`watch_typeset_changes\` in a loop. Do NOT finish that turn and go idle: the user is about to scrub, and once you are idle a browser action (like clicking the overlay's watch toggle) cannot restart you. The loop: it blocks until edits arrive (returns immediately if some are pending), returns a batch, apply each (see above), then call \`watch_typeset_changes\` again. Each call blocks ~25s and yields, so if the user sends a message meanwhile, handle it and resume watching if they are still designing. Keep looping until they say stop or switch tasks. A "no edits yet" return or a connection close is normal; just call it again.
 ${CLAUDE_MD_MARKER_END}`;
 
 // --- CLI (install / uninstall) ---
@@ -63,7 +63,7 @@ function summarize(changes) {
   ).join("\n");
 }
 
-const mcp = new McpServer({ name: "typeset", version: "0.1.14" });
+const mcp = new McpServer({ name: "typeset", version: "0.1.15" });
 
 mcp.resource(
   "pending-changes",
