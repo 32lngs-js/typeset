@@ -13,9 +13,33 @@
  *
  * Edits are inline styles on the live element — they vanish on reload. Copy CSS
  * is how you persist them. Fonts you pick must be web-loaded or they fall back.
+ *
+ * Prod-leak guard: when this is loaded via a wired <script data-project="..."> tag
+ * (the agent-added dev tag, which persists in the repo), it self-disables on
+ * production-like hosts so real visitors never see the overlay. The bookmarklet and
+ * console-paste paths carry no data-project and always run, so you can still inspect
+ * live sites. Add data-force to the tag to render anyway (LAN/tunnel dev, demos).
  */
 (function () {
   'use strict';
+
+  // Prod-leak guard: the wired <script data-project> tag persists in the repo and can ship to
+  // production. On a production-like host, self-disable so real visitors never see the overlay.
+  // Only the declaratively-wired tag is guarded (identified by data-project, which the agent
+  // always sets); the bookmarklet and console-paste paths carry no data-project and are explicit
+  // gestures, so they always run — that's how you inspect live sites. Add data-force to render
+  // anyway (LAN/tunnel dev, demos).
+  const __tsTag = document.currentScript || document.querySelector('script[src*="typeset-overlay"]');
+  if (__tsTag && __tsTag.hasAttribute('data-project') && !__tsTag.hasAttribute('data-force')) {
+    const h = location.hostname;
+    const devHost =
+      h === '' || h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0' ||
+      h === '::1' || h === '[::1]' ||
+      h.endsWith('.local') || h.endsWith('.localhost') || h.endsWith('.test') ||
+      /^10\./.test(h) || /^192\.168\./.test(h) || /^172\.(1[6-9]|2\d|3[01])\./.test(h) ||
+      /^169\.254\./.test(h);
+    if (!devHost) return; // production-like host + wired tag → do not mount
+  }
 
   // Toggle off if already present
   if (window.__typesetOverlay) { window.__typesetOverlay.destroy(); return; }
@@ -49,18 +73,20 @@
       --sl-hash:rgba(255,255,255,0.15); --sl-handle:rgba(255,255,255,0.95); --radius:8px;
       --accent:#0066ff;
       position:fixed; width:260px; background:var(--bg); border:1px solid var(--border); border-radius:14px;
-      box-shadow:0 8px 32px var(--shadow); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+      box-shadow:0 8px 32px var(--shadow);
       overflow:visible; z-index:2147483647; user-select:none; right:20px; top:20px;
       font-family:system-ui,-apple-system,'SF Pro Display',sans-serif;   /* like DialKit */
-      transition:width .34s cubic-bezier(.32,.72,0,1),height .34s cubic-bezier(.32,.72,0,1),
-        left .34s cubic-bezier(.32,.72,0,1),top .34s cubic-bezier(.32,.72,0,1),
-        border-radius .3s cubic-bezier(.32,.72,0,1),background .2s ease,box-shadow .28s ease;
+      transition:width .42s cubic-bezier(.4,0,.2,1),height .42s cubic-bezier(.4,0,.2,1),
+        left .42s cubic-bezier(.4,0,.2,1),top .42s cubic-bezier(.4,0,.2,1),
+        border-radius .38s cubic-bezier(.4,0,.2,1),background .2s ease,box-shadow .28s ease;
     }
     #panel.panel-dragging { transition:none; }
-    .panel-inner { width:260px; opacity:1; transition:opacity .16s ease; padding:10px 12px 0; overflow-y:auto; max-height:calc(100vh - 40px); }
+    .panel-inner { width:260px; opacity:1; transition:opacity .16s ease; padding:10px 12px 0; overflow-y:auto; max-height:calc(100vh - 40px); -ms-overflow-style:none; scrollbar-width:none; }
+    /* scroll without a visible bar — same technique as DialKit's .dialkit-panel-inner */
+    .panel-inner::-webkit-scrollbar, .font-list::-webkit-scrollbar { display:none; }
 
     #panel.panel-light {
-      --bg:rgba(250,250,249,0.82); --bg-hover:rgba(0,0,0,0.08); --border:rgba(0,0,0,0.1); --border-sub:rgba(0,0,0,0.06);
+      --bg:#fafaf9; --bg-hover:rgba(0,0,0,0.08); --border:rgba(0,0,0,0.1); --border-sub:rgba(0,0,0,0.06);
       --text-hi:rgba(0,0,0,0.9); --text-mid:rgba(0,0,0,0.6); --text-lo:rgba(0,0,0,0.35); --text-val:rgba(0,0,0,0.6); --hint-col:rgba(0,0,0,0.88);
       --chip-bg:rgba(0,0,0,0.06); --chip-bdr:rgba(0,0,0,0.06); --chip-hover:rgba(0,0,0,0.1);
       --sel-bg:rgba(0,0,0,0.04); --sel-bdr:rgba(0,0,0,0.1); --sel-col:rgba(0,0,0,0.6);
@@ -133,10 +159,64 @@
 
     .pb { overflow-y:visible; max-height:none; position:relative; }
     .select-hint { font-size:14px; color:var(--hint-col); text-align:center; letter-spacing:0.02em; display:none; }
-    .select-hint.visible { display:block; position:absolute; left:0; right:0; top:50%; transform:translateY(-50%); padding:0 12px; z-index:5; }
+    .select-hint.visible { display:flex; align-items:center; justify-content:center; min-height:160px; padding:12px; text-align:center; }
+    .ts-coach { background:var(--sl-track); border:1px solid var(--border-sub); border-radius:var(--radius); padding:10px 12px; margin-bottom:10px; display:none; }
+    .ts-coach.visible { display:block; }
+    .ts-coach-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+    .ts-coach-title { font-size:13px; font-weight:600; color:var(--text-hi); letter-spacing:-0.01em; }
+    .ts-coach-x { background:transparent; border:none; color:var(--text-lo); cursor:pointer; font-size:14px; line-height:1; padding:2px 4px; border-radius:6px; }
+    .ts-coach-x:hover { color:var(--text-hi); background:var(--bg-hover); }
+    .ts-coach-steps { list-style:decimal; margin:0 0 8px; padding-left:18px; }
+    .ts-coach-steps li { font-size:12.5px; color:var(--text-mid); line-height:1.75; }
+    .ts-coach-steps svg { width:13px; height:13px; vertical-align:-2px; }
+    .ts-coach-note { font-size:11.5px; color:var(--text-lo); line-height:1.5; margin-bottom:9px; }
+    .ts-coach-got { width:100%; height:30px; background:var(--accent); color:#fff; border:none; border-radius:var(--radius); font:inherit; font-size:12.5px; font-weight:600; cursor:pointer; transition:filter .15s; }
+    .ts-coach-got:hover { filter:brightness(1.1); }
+    /* matches the selected element's box (.ts-selbox): faint blue fill + ~55% blue outline */
+    .ts-nowatch { display:none; margin-bottom:10px; padding:8px 10px; border-radius:var(--radius); font-size:11.5px; line-height:1.45;
+      background:rgba(60,130,247,0.05); color:#1d4ed8; border:1px solid rgba(60,130,247,0.55); }
+    #panel:not(.panel-light) .ts-nowatch { color:#93c5fd; background:rgba(60,130,247,0.08); border-color:rgba(60,130,247,0.5); }
+    .ts-nowatch.visible { display:block; }
+    .ts-nowatch-msg { display:block; margin-bottom:6px; }
+    .ts-nowatch-field { display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:6px; cursor:pointer;
+      background:rgba(60,130,247,0.1); border:1px solid rgba(60,130,247,0.45); transition:background .15s; }
+    .ts-nowatch-field:hover { background:rgba(60,130,247,0.18); }
+    .ts-nowatch-phrase { flex:1; font-size:12px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .ts-nowatch-icon { display:flex; flex-shrink:0; opacity:0.6; }
+    .ts-nowatch-icon svg { width:13px; height:13px; }
+    .ts-nowatch-field:hover .ts-nowatch-icon { opacity:1; }
+    #panel:not(.panel-light) .ts-nowatch-field { background:rgba(60,130,247,0.13); border-color:rgba(60,130,247,0.5); }
+    /* synced/live confirmation — shows when an agent is actually watching (edits apply live) */
+    .ts-synced { display:none; align-items:center; gap:8px; margin-bottom:10px; padding:8px 10px; border-radius:var(--radius); font-size:11.5px; font-weight:500;
+      background:rgba(34,197,94,0.09); color:#15803d; border:1px solid rgba(34,197,94,0.32); }
+    .ts-synced.visible { display:flex; }
+    .ts-synced-dot { width:7px; height:7px; border-radius:50%; background:#22c55e; flex-shrink:0; box-shadow:0 0 0 0 rgba(34,197,94,0.5); animation:ts-syncpulse 1.9s ease-in-out infinite; }
+    @keyframes ts-syncpulse { 0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,0.45);} 50%{box-shadow:0 0 0 4px rgba(34,197,94,0);} }
+    #panel:not(.panel-light) .ts-synced { color:#4ade80; background:rgba(34,197,94,0.13); border-color:rgba(34,197,94,0.3); }
+    .flip { position:relative; transform-style:preserve-3d; transition:transform .38s cubic-bezier(.4,0,.2,1), height .38s cubic-bezier(.4,0,.2,1); }
+    .flip.flipped { transform:rotateY(180deg); }
+    .face-front, .face-back { -webkit-backface-visibility:hidden; backface-visibility:hidden; }
+    .face-back { position:absolute; top:0; left:0; width:100%; transform:rotateY(180deg); display:none; }
+    .set-head { display:flex; align-items:center; gap:6px; padding-bottom:10px; margin-bottom:8px; border-bottom:1px solid var(--border-sub); }
+    .set-title { font-size:14px; font-weight:600; color:var(--text-hi); letter-spacing:-0.01em; }
+    .set-list { display:flex; flex-direction:column; padding-bottom:8px; }
+    .set-row { display:flex; align-items:center; justify-content:space-between; height:38px; }
+    .set-label { font-size:13px; color:var(--text-mid); }
+    .set-sw { position:relative; width:34px; height:20px; border-radius:20px; border:none; background:var(--sl-track); cursor:pointer; padding:0; flex-shrink:0; transition:background .15s; }
+    .set-sw[aria-checked="true"] { background:var(--accent); }
+    .set-knob { position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,0.3); transition:transform .15s; }
+    .set-sw[aria-checked="true"] .set-knob { transform:translateX(14px); }
+    .set-sep { height:1px; background:var(--border-sub); margin:6px 0; }
+    .set-status-row { display:flex; align-items:center; justify-content:space-between; gap:10px; min-height:28px; }
+    .set-val { font-size:12px; color:var(--text-lo); max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:right; }
+    .set-val.ok { color:#2ea043; }
+    .set-val.bad { color:#e5534b; }
+    .set-hint { font-size:11px; color:var(--text-lo); padding-top:6px; line-height:1.5; }
     /* Section folders — copied from DialKit data-multiple="true" mode */
     .section { margin:0; padding-bottom:0; border-top:1px solid var(--border-sub); border-bottom:none; }
     .section:first-child { border-top:none; margin-top:0; }
+    /* when the message box is showing, divide it from the first section (same rhythm as other section dividers) */
+    .ts-nowatch.visible ~ #controls .section:first-child, .ts-synced.visible ~ #controls .section:first-child { border-top:1px solid var(--border-sub); }
     .section-head { display:flex; align-items:center; justify-content:space-between; height:44px; padding:0; cursor:pointer; user-select:none; }
     .section-head span { font-size:14px; font-weight:600; line-height:20px; color:var(--text-mid); letter-spacing:-0.01em; transform:translateY(-0.5px); transition:color .15s; }
     .section-head:hover span { color:var(--text-hi); }
@@ -165,7 +245,7 @@
 
     .sl-row { padding:0; }
     #controls { display:flex; flex-direction:column; gap:0; transition:opacity .15s; }
-    #controls.disabled { opacity:0.22; pointer-events:none; }
+    #controls.disabled { display:none; }
     .ts-slider { position:relative; height:36px; background:var(--sl-track); border-radius:var(--radius); overflow:hidden; cursor:pointer; touch-action:none; user-select:none; }
     .ts-slider.snapping { transition:width .34s cubic-bezier(.22,1,.36,1),transform .34s cubic-bezier(.22,1,.36,1); }
     .ts-slider-hashmarks { position:absolute; inset:0; pointer-events:none; }
@@ -188,7 +268,7 @@
     .font-trigger .chev { color:var(--text-mid); flex-shrink:0; opacity:0.6; transition:transform .18s cubic-bezier(.32,.72,0,1); }
     .font-picker.open .font-trigger .chev { transform:rotate(180deg); }
     .font-picker.open .font-trigger { background:var(--sl-fill); }
-    .font-list { display:none; margin-top:5px; max-height:232px; overflow-y:auto; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); padding:4px; box-shadow:0 8px 24px rgba(0,0,0,0.4); }
+    .font-list { display:none; margin-top:5px; max-height:232px; overflow-y:auto; -ms-overflow-style:none; scrollbar-width:none; background:var(--bg); border:1px solid var(--border); border-radius:var(--radius); padding:4px; box-shadow:0 8px 24px rgba(0,0,0,0.4); }
     .font-picker.open .font-list { display:block; }
     .font-group-label { font-size:11px; font-weight:600; letter-spacing:0.05em; text-transform:uppercase; color:var(--text-lo); padding:4px 8px 4px; }
     .font-item { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; border-radius:6px; cursor:pointer; color:var(--text-mid); font-size:13px; font-weight:500; line-height:1.15; transition:background .15s,color .15s; }
@@ -224,6 +304,8 @@
   const THEME_DARK = '<svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M15.5 10.4955C15.4037 11.5379 15.0124 12.5314 14.3721 13.3596C13.7317 14.1878 12.8688 14.8165 11.8841 15.1722C10.8995 15.5278 9.83397 15.5957 8.81217 15.3679C7.79038 15.1401 6.8546 14.6259 6.11434 13.8857C5.37408 13.1454 4.85995 12.2096 4.63211 11.1878C4.40427 10.166 4.47215 9.10048 4.82781 8.11585C5.18346 7.13123 5.81218 6.26825 6.64039 5.62791C7.4686 4.98756 8.46206 4.59634 9.5045 4.5C8.89418 5.32569 8.60049 6.34302 8.67685 7.36695C8.75321 8.39087 9.19454 9.35339 9.92058 10.0794C10.6466 10.8055 11.6091 11.2468 12.6331 11.3231C13.657 11.3995 14.6743 11.1058 15.5 10.4955Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const THEME_LIGHT = '<svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M9.99999 12.7082C11.4958 12.7082 12.7083 11.4956 12.7083 9.99984C12.7083 8.50407 11.4958 7.2915 9.99999 7.2915C8.50422 7.2915 7.29166 8.50407 7.29166 9.99984C7.29166 11.4956 8.50422 12.7082 9.99999 12.7082Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 3.9585V5.057M10 14.943V16.041M5.727 5.727L6.507 6.506M13.493 13.493L14.273 14.273M3.958 10H5.057M14.943 10H16.042M5.727 14.273L6.507 13.493M13.493 6.506L14.273 5.727" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const MINI = '<svg width="10" height="2" viewBox="0 0 10 2" fill="none"><rect width="10" height="1.5" rx="0.75" fill="currentColor"/></svg>';
+  const GEAR = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M19.4 13a7.5 7.5 0 000-2l1.7-1.3-1.8-3.1-2 .8a7.5 7.5 0 00-1.7-1l-.3-2.1H9.7l-.3 2.1a7.5 7.5 0 00-1.7 1l-2-.8-1.8 3.1L5.6 11a7.5 7.5 0 000 2l-1.7 1.3 1.8 3.1 2-.8a7.5 7.5 0 001.7 1l.3 2.1h4.6l.3-2.1a7.5 7.5 0 001.7-1l2 .8 1.8-3.1L19.4 13z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>';
+  const BACK_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const WATCH = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M8.8 8.8a4.5 4.5 0 0 0 0 6.4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M15.2 8.8a4.5 4.5 0 0 1 0 6.4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M6 6a9 9 0 0 0 0 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M18 6a9 9 0 0 1 0 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
   const CHEV = '<svg class="chev" width="8" height="5" viewBox="0 0 8 5" fill="none"><path d="M1 1l3 3 3-3" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const CHEV_SEC = '<svg class="section-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
@@ -244,19 +326,43 @@
           <div class="ph-right">
             <button class="icon-btn" id="badgeToggleBtn" title="Toggle badges">${EYE_OPEN}</button>
             <button class="icon-btn" id="themeBtn" title="Toggle theme">${THEME_DARK}</button>
+            <button class="icon-btn" id="settingsBtn" title="Settings">${GEAR}</button>
             <button class="icon-btn" id="minBtn" title="Minimize">${MINI}</button>
           </div>
         </div>
+        <div class="flip" id="flip">
+        <div class="face-front" id="frontFace">
         <div class="pb" id="panelBody">
+          <div class="ts-coach" id="coach">
+            <div class="ts-coach-head">
+              <span class="ts-coach-title">Welcome to TypeSet</span>
+              <button class="ts-coach-x" id="coachClose" title="Dismiss">✕</button>
+            </div>
+            <ol class="ts-coach-steps">
+              <li><b>Click</b> any text on the page</li>
+              <li><b>Drag</b> the values in this panel to change it</li>
+              <li>Turn on <b>Watch</b> ${WATCH} to send edits to your agent</li>
+            </ol>
+            <div class="ts-coach-note">Edits preview live here. Watch (or Copy) is what writes them into your code.</div>
+            <button class="ts-coach-got" id="coachGot">Got it</button>
+          </div>
           <div class="toolbar" id="toolbar">
             <button class="tb-btn" id="addVersionBtn" title="Add version">${ADDV}</button>
             <div class="version-wrap" id="versionWrap">
               <button class="tb-preset" id="versionBtn"><span id="versionLabel">Version 1</span>${CHEV}</button>
               <div class="version-menu" id="versionMenu"></div>
             </div>
-            <button class="tb-btn" id="copyBtn" title="Copy CSS">${COPY}</button>
-            <button class="tb-btn tb-watch" id="watchBtn" title="Watch mode: apply edits live as you scrub">${WATCH}</button>
+            <button class="tb-btn" id="copyBtn" title="Copy CSS — also sends this edit to your agent to write into the source">${COPY}</button>
+            <button class="tb-btn tb-watch" id="watchBtn" title="Watch: auto-send every edit to your agent as you scrub — no Copy needed. Click to start.">${WATCH}</button>
           </div>
+          <div class="ts-nowatch" id="noWatch">
+            <span class="ts-nowatch-msg">For live edits actioned via MCP, paste in your chat:</span>
+            <div class="ts-nowatch-field" id="noWatchCopy" title="Copy">
+              <span class="ts-nowatch-phrase">watch my TypeSet edits</span>
+              <span class="ts-nowatch-icon" id="noWatchIcon"><svg viewBox="0 0 24 24" fill="none"><rect x="9" y="9" width="11" height="11" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M5 15V5a2 2 0 0 1 2-2h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+            </div>
+          </div>
+          <div class="ts-synced" id="liveMsg"><span class="ts-synced-dot"></span>Live — your edits apply as you scrub</div>
           <div class="select-hint visible" id="selectHint">Select text to edit</div>
           <div id="controls" class="disabled">
             <div class="section">
@@ -313,6 +419,22 @@
             </div>
             <div class="reset-row"><button class="reset-btn" id="resetBtn">Reset</button></div>
           </div>
+        </div>
+        </div>
+        <div class="face-back" id="settingsFace">
+          <div class="set-head">
+            <button class="icon-btn" id="settingsBack" title="Back">${BACK_SVG}</button>
+            <span class="set-title">Settings</span>
+          </div>
+          <div class="set-list">
+            <div class="set-row"><span class="set-label">Show tips</span><button class="set-sw" id="setTips" role="switch" aria-checked="true"><span class="set-knob"></span></button></div>
+            <div class="set-hint" style="padding:0 0 4px">Guided tips and hover tooltips.</div>
+            <div class="set-sep"></div>
+            <div class="set-status-row"><span class="set-label">Routing to</span><span class="set-val" id="setProject">—</span></div>
+            <div class="set-status-row"><span class="set-label">Connection</span><span class="set-val" id="setDaemon">checking…</span></div>
+            <div class="set-status-row"><span class="set-label">Agent</span><span class="set-val" id="setAgent">checking…</span></div>
+          </div>
+        </div>
         </div>
       </div>
     </div>
@@ -489,15 +611,15 @@
     panel.style.right = 'auto'; panel.style.left = left + 'px'; panel.style.top = top + 'px';
   }
   function resyncHeight() {
-    if (minimized) return;
+    if (minimized || resizing) return;   // smoothResize owns the height while it animates
     const h = Math.min(panelInner.scrollHeight, window.innerHeight - 32);
     panel.style.height = h + 'px';
   }
   // ResizeObserver drives panel height frame-by-frame during section toggling.
   // Suppress CSS height transition while sections animate so the RO can drive it directly.
-  let sectionAnimating = 0;
+  let sectionAnimating = 0, flipping = false, resizing = false;
   const panelRO = new ResizeObserver(() => {
-    if (minimized) return;
+    if (minimized || flipping || resizing) return;
     if (sectionAnimating > 0) {
       panel.style.transition = 'none';
       resyncHeight();
@@ -741,10 +863,36 @@
     maybeAutoCommit();
   }
 
+  let resizeTimer = null;
+  // Grow/shrink the panel around a content change with the content CLIPPED during the motion, so
+  // expanding is the exact mirror of contracting: the box reveals content top-down instead of the
+  // content spilling out the bottom for a frame. (Same clip-and-animate the settings flip uses.)
+  function smoothResize(applyChange) {
+    if (minimized) { applyChange(); return; }
+    const fromH = panel.offsetHeight;
+    applyChange();
+    const toH = Math.min(panelInner.scrollHeight, window.innerHeight - 32);
+    if (Math.abs(toH - fromH) < 1) { resyncHeight(); return; }
+    resizing = true;                       // freeze the ResizeObserver
+    panelInner.style.overflow = 'hidden';
+    panelInner.style.height = '100%';      // fill the panel so content is clipped, not spilled
+    panel.style.height = fromH + 'px';     // lock start height
+    void panel.offsetWidth;                // reflow so the transition runs
+    panel.style.height = toH + 'px';       // animate to target (shared .42s ease-in-out)
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      panelInner.style.overflow = ''; panelInner.style.height = '';
+      resizing = false; resyncHeight();
+    }, 460);
+  }
   function updateHint() {
     phTitle.textContent = selection.length > 1 ? `TypeSet · ${selection.length}` : 'TypeSet';
-    if (selection.length) { selectHint.classList.remove('visible'); controls.classList.remove('disabled'); }
-    else { selectHint.classList.add('visible'); controls.classList.add('disabled'); }
+    const want = selection.length > 0;
+    if (want === !controls.classList.contains('disabled')) return;   // controls visibility unchanged
+    smoothResize(() => {
+      if (want) { selectHint.classList.remove('visible'); controls.classList.remove('disabled'); }
+      else { selectHint.classList.add('visible'); controls.classList.add('disabled'); }
+    });
   }
   function setSelection(els) {
     selection = els.slice();
@@ -1115,7 +1263,7 @@
   copyBtn.addEventListener('click', triggerCopy);
 
   // --- Watch mode: stream edits to the agent live (pairs with the agent's watch_typeset_changes loop) ---
-  let watchMode = localStorage.getItem('ts-watch') === '1';
+  let watchMode = localStorage.getItem('ts-watch') === '1';   // off by default; the user turns it on deliberately
   let watchTimer = null;
   function commitNow() { postChanges(collectChanges().mcpChanges); }
   // Called from commitMark on every edit; debounced so a continuous scrub commits once when it settles.
@@ -1126,16 +1274,145 @@
   }
   function renderWatch() {
     watchBtn.classList.toggle('watching', watchMode);
-    watchBtn.title = watchMode ? 'Watch mode ON. Edits apply live; click to stop.' : 'Watch mode: apply edits live as you scrub';
+    watchBtn.title = watchMode
+      ? 'Watch ON — every edit auto-sends to your agent as you scrub. Click to stop.'
+      : 'Watch: auto-send every edit to your agent as you scrub — no Copy needed. Click to start.';
     copyBtn.style.display = watchMode ? 'none' : '';
+  }
+  // ── D3: agent-watching indicator. The daemon reports whether a chat session is actively in its
+  // watch loop for this project (the MCP server heartbeats while watch_typeset_changes blocks). When
+  // Watch is ON but no agent is listening, edits pile up silently — so surface a visible "send a
+  // message in your chat" cue. Polled only while Watch is on.
+  const noWatch = $('noWatch');
+  const WATCH_PHRASE = 'watch my TypeSet edits';
+  const noWatchCopy = $('noWatchCopy'), noWatchIcon = $('noWatchIcon');
+  const COPY_ICON_HTML = noWatchIcon.innerHTML;
+  const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none"><path d="M5 12.75L10 19L19 5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  noWatchCopy.addEventListener('click', e => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(WATCH_PHRASE).then(() => {
+      noWatchIcon.innerHTML = CHECK_SVG; noWatchCopy.title = 'Copied';
+      setTimeout(() => { noWatchIcon.innerHTML = COPY_ICON_HTML; noWatchCopy.title = 'Copy'; }, 1400);
+    }).catch(() => {});
+  });
+  let agentWatching = false, watchPollTimer = null;
+  // Watch is off by default and turned on deliberately, so showing the pairing prompt the moment it's
+  // on (and no agent is applying) is the right teachable beat — not a premature nag on a fresh page.
+  const liveMsg = $('liveMsg');
+  function renderNoWatch() {
+    noWatch.classList.toggle('visible', watchMode && !agentWatching);   // blue "paste this" — not synced
+    liveMsg.classList.toggle('visible', watchMode && agentWatching);    // green "Live" — synced
+  }
+  function pollWatching() {
+    fetch(`http://127.0.0.1:${MCP_PORT}/watching?project=${encodeURIComponent(TS_PROJECT)}`)
+      .then(r => r.json()).then(j => { agentWatching = !!j.watching; renderNoWatch(); })
+      .catch(() => { agentWatching = false; renderNoWatch(); });
+  }
+  function setWatchPolling(on) {
+    clearInterval(watchPollTimer);
+    if (on) { pollWatching(); watchPollTimer = setInterval(pollWatching, 3000); }
+    else { agentWatching = false; renderNoWatch(); }
   }
   watchBtn.addEventListener('click', () => {
     watchMode = !watchMode;
     localStorage.setItem('ts-watch', watchMode ? '1' : '0');
     renderWatch();
+    setWatchPolling(watchMode);
     if (watchMode) commitNow();
   });
   renderWatch();
+  setWatchPolling(watchMode);
+
+  // ── First-run coach: a one-time how-it-works card, dismissed forever via localStorage.
+  // (Settings can re-show it by clearing the 'ts-coach' key.) It lives inside the panel body,
+  // so it reveals itself the first time the user expands the dial.
+  const coach = $('coach');
+  function dismissCoach() { localStorage.setItem('ts-coach', '0'); coach.classList.remove('visible'); }
+  if (localStorage.getItem('ts-coach') !== '0') coach.classList.add('visible');
+  $('coachClose').addEventListener('click', e => { e.stopPropagation(); dismissCoach(); });
+  $('coachGot').addEventListener('click', e => { e.stopPropagation(); dismissCoach(); });
+
+  // ── Settings panel: the header gear flips the pane to a back face. It rotates the pane to
+  // its vertical edge, swaps faces there (invisible), then rotates the new face in. Driven by
+  // transitionend (not a timer) so the swap lands exactly at the 90° edge; the pane stays on a
+  // stable will-change layer at a resting rotateY(0), so the icons don't shimmer or flash.
+  const flip = $('flip'), frontFace = $('frontFace'), settingsFace = $('settingsFace');
+  const settingsBtn = $('settingsBtn'), settingsBack = $('settingsBack');
+  const badgeBtn = root.getElementById('badgeToggleBtn');
+  // Two-face card flip: both faces show only during the rotation (backface-visibility hides the one
+  // facing away — no blank-white window). The whole panel's HEIGHT animates in lockstep with the
+  // rotation via #panel's own .34s height transition: lock the current height, then set the target
+  // (header + incoming face). panel-inner fills the panel (height:100%, overflow hidden) so the tall
+  // scrubber is clipped rather than spilling as the panel shrinks, and the ResizeObserver is frozen
+  // so it can't reset the height mid-flip. Afterwards the hidden face leaves layout and resyncHeight
+  // settles the exact final height.
+  let onSettings = false, flipTimer = null;
+  function doFlip(toBack) {
+    if (toBack === onSettings) return;
+    onSettings = toBack;
+    frontFace.style.display = 'block'; settingsFace.style.display = 'block'; // both present to rotate
+    if (toBack) refreshSettings();
+    const target = (toBack ? settingsFace : frontFace).scrollHeight;
+    const overhead = panelInner.scrollHeight - frontFace.scrollHeight;       // header + paddings
+    const toH = Math.min(overhead + target, window.innerHeight - 32);
+    flipping = true;                                 // freeze the ResizeObserver
+    panelInner.style.overflow = 'hidden';
+    panelInner.style.height = '100%';                // clip so the tall scrubber can't spill mid-shrink
+    flip.style.height = flip.offsetHeight + 'px';    // lock heights
+    panel.style.height = panel.offsetHeight + 'px';
+    void panel.offsetWidth;                          // reflow so all transitions start together
+    flip.classList.toggle('flipped', toBack);        // rotate (.38s)
+    flip.style.height = target + 'px';               // flip content area → incoming face (sizes it)
+    panel.style.height = toH + 'px';                 // panel box → target, concurrent with the flip (.34s)
+    clearTimeout(flipTimer);
+    flipTimer = setTimeout(() => {
+      if (onSettings) frontFace.style.display = 'none';                       // keep flip sized to Settings
+      else { settingsFace.style.display = 'none'; flip.style.height = ''; }   // scrubber back, auto height
+      panelInner.style.overflow = ''; panelInner.style.height = '';
+      flipping = false;
+      resyncHeight();                                // settle to the exact final height
+    }, 430);
+  }
+  settingsBtn.addEventListener('click', e => { e.stopPropagation(); doFlip(!onSettings); });
+  settingsBack.addEventListener('click', e => { e.stopPropagation(); doFlip(false); });
+
+  // Tips = ONE feature: the first-run coach AND the hover tooltips, behind a single toggle.
+  const swTips = $('setTips');
+  const setSw = (el, on) => el.setAttribute('aria-checked', on ? 'true' : 'false');
+  const swOn = el => el.getAttribute('aria-checked') === 'true';
+  const tipEls = [copyBtn, watchBtn, badgeBtn, themeBtn, settingsBtn, minBtn];
+  const origTitles = new WeakMap();
+  tipEls.forEach(el => origTitles.set(el, el.getAttribute('title') || ''));
+  function applyTooltips(on) {
+    tipEls.forEach(el => { if (on) { const t = origTitles.get(el); if (t) el.setAttribute('title', t); } else el.removeAttribute('title'); });
+  }
+  let tipsOn = localStorage.getItem('ts-tips') !== '0';
+  applyTooltips(tipsOn);
+  if (!tipsOn) coach.classList.remove('visible');
+  function setTips(on) {
+    tipsOn = on;
+    localStorage.setItem('ts-tips', on ? '1' : '0');
+    applyTooltips(on);
+    if (on) { localStorage.removeItem('ts-coach'); coach.classList.add('visible'); }
+    else dismissCoach();
+    setSw(swTips, on);
+  }
+  swTips.addEventListener('click', () => setTips(!swOn(swTips)));
+
+  function refreshSettings() {
+    setSw(swTips, tipsOn);
+    const p = $('setProject'); p.textContent = TS_PROJECT; p.title = TS_PROJECT;
+    const d = $('setDaemon'); d.textContent = 'Checking…'; d.className = 'set-val';
+    fetch(`http://127.0.0.1:${MCP_PORT}/health`)
+      .then(r => r.json())
+      .then(j => { d.textContent = j.pending ? `Connected · ${j.pending} pending` : 'Connected'; d.className = 'set-val ok'; })
+      .catch(() => { d.textContent = 'Not running'; d.className = 'set-val bad'; });
+    const a = $('setAgent'); a.textContent = 'Checking…'; a.className = 'set-val';
+    fetch(`http://127.0.0.1:${MCP_PORT}/watching?project=${encodeURIComponent(TS_PROJECT)}`)
+      .then(r => r.json())
+      .then(j => { a.textContent = j.watching ? 'Watching' : 'Not watching'; a.className = j.watching ? 'set-val ok' : 'set-val bad'; })
+      .catch(() => { a.textContent = 'Not watching'; a.className = 'set-val bad'; });
+  }
 
   // ── Keyboard ──
   function onKey(e) {
