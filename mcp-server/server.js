@@ -7,6 +7,7 @@ import { execSync } from "child_process";
 
 const PORT = parseInt(process.env.TYPESET_PORT || "8800");
 const PENDING_FILE = join(homedir(), ".typeset-pending.json");
+const WATCHING_FILE = join(homedir(), ".typeset-watching.json");
 const CLAUDE_SETTINGS = join(homedir(), ".claude", "settings.json");
 const CLAUDE_MD = join(homedir(), ".claude", "CLAUDE.md");
 const CLAUDE_MD_MARKER_START = "<!-- typeset:start -->";
@@ -108,6 +109,21 @@ const httpServer = createServer((req, res) => {
     const pending = project ? all.filter(c => c.project === project).length : all.length;
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ ok: true, pending, port: PORT }));
+    return;
+  }
+
+  // Is an agent actively watching this project? True if the project (or the "*" unbound fallback)
+  // has a non-expired heartbeat written by the MCP server's watch loop.
+  if (req.method === "GET" && path === "/watching") {
+    const project = url.searchParams.get("project");
+    let obj = {};
+    try { obj = JSON.parse(readFileSync(WATCHING_FILE, "utf8")); } catch {}
+    const now = Date.now();
+    const watching = !!((project && obj[project] > now) || obj["*"] > now);
+    const all = readChanges();
+    const pending = project ? all.filter(c => c.project === project).length : all.length;
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ watching, pending }));
     return;
   }
 

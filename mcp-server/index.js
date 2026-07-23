@@ -9,6 +9,8 @@ import { z } from "zod";
 
 const PORT = parseInt(process.env.TYPESET_PORT || "8800");
 const PENDING_FILE = join(homedir(), ".typeset-pending.json");
+const WATCHING_FILE = join(homedir(), ".typeset-watching.json");
+const WATCH_TTL_MS = 10000;   // a project's watch heartbeat is considered live for this long
 const CLAUDE_SETTINGS = join(homedir(), ".claude", "settings.json");
 const CLAUDE_MD = join(homedir(), ".claude", "CLAUDE.md");
 const CLAUDE_MD_MARKER_START = "<!-- typeset:start -->";
@@ -21,14 +23,14 @@ TypeSet routes each browser edit to the chat that owns its project, keyed on the
 
 **Bind this chat to its workspace — do this once, as early as you touch TypeSet in a session:** run \`pwd\`, then call \`set_typeset_project\` with that path. This chat now only receives edits from that workspace. You do NOT need the user to say "add typeset"; bind on your own the first time TypeSet is relevant.
 
-**Tag the page once per project:** the overlay script tag must carry \`data-project\` set to that same \`pwd\` (this is what routes the page's edits to this chat, and it persists in the HTML). Add the tag if missing, or add the attribute if an older tag lacks it (remove before shipping):
+**Ensure the overlay tag is on the page — this is what makes the panel appear.** When you spin up or open a frontend project, make sure its HTML carries the overlay script tag with \`data-project\` set to this session's \`pwd\`: add the tag if missing, or add the attribute if an older tag lacks it. This both makes the panel show up and routes the page's edits to this chat. The tag persists in the HTML and self-disables on production hosts, so it is safe to leave in (remove it if you prefer):
 \`\`\`html
 <script src="https://32lngs-js.github.io/typeset/typeset-overlay.js" data-project="<pwd>"></script>
 \`\`\`
 
 **Applying an edit:** each change is a selector, a property, and a target \`value\`; make that property equal \`value\` in the SOURCE. Locate it: for normal CSS, search the class portion of the selector (e.g. \`h1.display\` → \`.display\`) in \`<style>\` blocks and \`.css\` files; for Tailwind the value lives in a utility class ON the element and the selector contains it — a selector with \`text-[30px]\` means \`class="... text-[30px] ..."\`, so change that class to e.g. \`text-[20.5px]\`. Decide whether to write by reading the source: if it already holds \`value\`, skip; otherwise write \`value\`. Do NOT judge this from any before/after numbers (TypeSet reports the browser's computed state, which does not reflect the source and often already equals the target). Only call \`apply_typeset_change\` once the file actually holds \`value\`.
 
-**Watch mode (hands-free): enter it on your own; never make the user type "watch mode".** The trigger is the START of a design session, not the first edit. The moment you spin up or start a dev server for, or open, a page that has the TypeSet overlay, immediately bind (\`pwd\` → \`set_typeset_project\`) and call \`watch_typeset_changes\` in a loop. Do NOT finish that turn and go idle: the user is about to scrub, and once you are idle a browser action (like clicking the overlay's watch toggle) cannot restart you. The loop: it blocks until edits arrive (returns immediately if some are pending), returns a batch, apply each (see above), then call \`watch_typeset_changes\` again. Each call blocks ~25s and yields, so if the user sends a message meanwhile, handle it and resume watching if they are still designing. Keep looping until they say stop or switch tasks. A "no edits yet" return or a connection close is normal; just call it again.
+**Watch mode (hands-free): enter it on your own; never make the user type "watch mode".** The trigger is the START of a design session, not the first edit. The moment you spin up or start a dev server for, or open, a frontend project's page, first ensure the overlay tag is present (see above — add it if missing so the panel appears), then immediately bind (\`pwd\` → \`set_typeset_project\`) and call \`watch_typeset_changes\` in a loop. Do NOT finish that turn and go idle: the user is about to scrub, and once you are idle a browser action (like clicking the overlay's watch toggle) cannot restart you. The loop: it blocks until edits arrive (returns immediately if some are pending), returns a batch, apply each (see above), then call \`watch_typeset_changes\` again. Each call blocks ~25s and yields, so if the user sends a message meanwhile, handle it and resume watching if they are still designing. Keep looping until they say stop or switch tasks. A "no edits yet" return or a connection close is normal; just call it again. If the user pastes **"watch my TypeSet edits"** — the overlay shows this exact phrase as the pairing cue when no agent is watching (typically after you had gone idle) — treat it as an explicit request to (re)enter the \`watch_typeset_changes\` loop right away.
 ${CLAUDE_MD_MARKER_END}`;
 
 // --- CLI (install / uninstall) ---
@@ -43,6 +45,20 @@ function readPending() {
 
 function writePending(changes) {
   writeFileSync(PENDING_FILE, JSON.stringify(changes, null, 2));
+}
+
+// Heartbeat: record that this session is actively watching its project, so the daemon can tell the
+// overlay whether an agent is listening (the agent-watching indicator). Keyed by project path, or
+// "*" when unbound (single-session fallback). Expired entries are pruned on each write.
+function beat() {
+  try {
+    let obj = {};
+    try { obj = JSON.parse(readFileSync(WATCHING_FILE, "utf8")); } catch {}
+    const now = Date.now();
+    for (const k of Object.keys(obj)) if (!(obj[k] > now)) delete obj[k];
+    obj[scopedProject || "*"] = now + WATCH_TTL_MS;
+    writeFileSync(WATCHING_FILE, JSON.stringify(obj));
+  } catch {}
 }
 
 // The project this session is bound to (via set_typeset_project, or the TYPESET_PROJECT env).
@@ -63,7 +79,7 @@ function summarize(changes) {
   ).join("\n");
 }
 
-const mcp = new McpServer({ name: "typeset", version: "0.1.15" });
+const mcp = new McpServer({ name: "typeset", version: "0.1.18" });
 
 mcp.resource(
   "pending-changes",
@@ -133,6 +149,7 @@ mcp.tool(
   { timeoutSeconds: z.number().optional().describe("Max seconds to block before returning empty (default 25; kept under the MCP client's tool-call timeout, so loop).") },
   async ({ timeoutSeconds }) => {
     const timeoutMs = Math.max(1, Math.min(timeoutSeconds || 25, 55)) * 1000;
+    beat();   // mark this session as watching its project
     return await new Promise((resolve) => {
       let done = false;
       const finish = (text) => {
@@ -148,7 +165,7 @@ mcp.tool(
         if (changes.length) finish(summarize(changes));
       };
       const watcher = watch(homedir(), { persistent: false }, (_, f) => { if (f === ".typeset-pending.json") check(); });
-      const poll = setInterval(check, 1000);
+      const poll = setInterval(() => { beat(); check(); }, 1000);   // keep the heartbeat fresh while blocking
       const timer = setTimeout(() => finish("No new TypeSet edits within the timeout. Call watch_typeset_changes again to keep watching, or stop if the user is done."), timeoutMs);
       check();
     });
