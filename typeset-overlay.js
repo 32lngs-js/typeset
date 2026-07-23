@@ -278,6 +278,10 @@
     .ts-selbox { position:fixed; pointer-events:none; z-index:2147483646; border-radius:4px;
       border:2px solid rgba(60,130,247,0.55); background:rgba(60,130,247,0.05); }
     .ts-selbox.group { border-color:rgba(34,197,94,0.6); background:rgba(34,197,94,0.06); }
+    /* on-canvas resize handles: two dots on the single selected element's left/right edge */
+    .ts-handle { position:fixed; width:14px; height:14px; box-sizing:border-box; background:rgba(60,130,247,1);
+      border:2px solid #fff; border-radius:50%; box-shadow:0 1px 4px rgba(0,0,0,0.35); cursor:ew-resize;
+      z-index:2147483647; pointer-events:auto; display:none; }
     /* dark pill descriptor label (agentation hover tooltip) */
     .ts-label { position:fixed; display:none; z-index:2147483647; pointer-events:none;
       font:500 11px/1.3 system-ui,-apple-system,sans-serif; color:#fff; background:rgba(0,0,0,0.85);
@@ -444,7 +448,7 @@
   function snapOne(el) {
     const s = el.style;
     return { el, fontSize: s.fontSize, fontWeight: s.fontWeight, lineHeight: s.lineHeight,
-             letterSpacing: s.letterSpacing, fontFamily: s.fontFamily, textAlign: s.textAlign, transform: s.transform, maxWidth: s.maxWidth, padding: s.padding, borderRadius: s.borderRadius, opacity: s.opacity, fontStyle: s.fontStyle, textDecoration: s.textDecoration };
+             letterSpacing: s.letterSpacing, fontFamily: s.fontFamily, textAlign: s.textAlign, transform: s.transform, maxWidth: s.maxWidth, marginTop: s.marginTop, padding: s.padding, borderRadius: s.borderRadius, opacity: s.opacity, fontStyle: s.fontStyle, textDecoration: s.textDecoration };
   }
   function pushUndo() { if (selection.length) undoStack.push(selection.map(snapOne)); }
   function popUndo() {
@@ -452,7 +456,7 @@
     entry.forEach(s => {
       const st = s.el.style;
       st.fontSize = s.fontSize; st.fontWeight = s.fontWeight; st.lineHeight = s.lineHeight;
-      st.letterSpacing = s.letterSpacing; st.fontFamily = s.fontFamily; st.textAlign = s.textAlign; st.transform = s.transform; st.maxWidth = s.maxWidth; st.padding = s.padding; st.borderRadius = s.borderRadius; st.opacity = s.opacity; st.fontStyle = s.fontStyle; st.textDecoration = s.textDecoration;
+      st.letterSpacing = s.letterSpacing; st.fontFamily = s.fontFamily; st.textAlign = s.textAlign; st.transform = s.transform; st.maxWidth = s.maxWidth; st.marginTop = s.marginTop; st.padding = s.padding; st.borderRadius = s.borderRadius; st.opacity = s.opacity; st.fontStyle = s.fontStyle; st.textDecoration = s.textDecoration;
     });
     if (active) { const m = new DOMMatrix(getComputedStyle(active).transform); txX = Math.round(m.m41); txY = Math.round(m.m42); syncFrom(active); }
     saveCurrentVersion(); updateSelBoxes();
@@ -765,8 +769,49 @@
     while (selBoxes.length > selection.length) { selBoxes.pop().node.remove(); }
     const group = selection.length > 1;
     selection.forEach((el, i) => { selBoxes[i].el = el; selBoxes[i].node.classList.toggle('group', group); boxTo(selBoxes[i].node, el); });
+    positionHandles();
   }
-  function positionSelBoxes() { selBoxes.forEach(b => { if (b.el) boxTo(b.node, b.el); }); }
+  function positionSelBoxes() { selBoxes.forEach(b => { if (b.el) boxTo(b.node, b.el); }); positionHandles(); }
+
+  // ── On-canvas resize: two dots on the single selected element's left/right edge. Both drive
+  // max-width (the same state the "Width" slider uses); dragging a dot outward grows the element,
+  // inward shrinks it. The element grows per its own alignment — two dots let a right-aligned
+  // element grow leftward instead of being trapped against the container edge.
+  const handleL = document.createElement('div'); handleL.className = 'ts-handle';
+  const handleR = document.createElement('div'); handleR.className = 'ts-handle';
+  root.appendChild(handleL); root.appendChild(handleR);
+  function positionHandles() {
+    const show = !!active && selection.length === 1 && selecting() && !minimized;
+    handleL.style.display = handleR.style.display = show ? 'block' : 'none';
+    if (!show) return;
+    const r = active.getBoundingClientRect(), cy = r.top + r.height / 2;
+    handleL.style.left = (r.left - 7) + 'px'; handleL.style.top = (cy - 7) + 'px';
+    handleR.style.left = (r.right - 7) + 'px'; handleR.style.top = (cy - 7) + 'px';
+  }
+  function startResize(e, side) {
+    if (!active) return;
+    e.preventDefault(); e.stopPropagation();
+    canvasBusy = true;
+    const el = active, sx = e.clientX, cs = getComputedStyle(el);
+    const w0 = cs.maxWidth === 'none' ? Math.round(parseFloat(cs.width)) : Math.round(parseFloat(cs.maxWidth));
+    pushUndo();
+    const move = ev => {
+      const dx = ev.clientX - sx;
+      const w = Math.max(20, Math.round(side === 'r' ? w0 + dx : w0 - dx));   // outward = grow
+      el.style.maxWidth = w + 'px'; trackEdited(el);
+      vEl('maxWidth').textContent = w + 'px'; updateRowTrack('maxWidth', w);
+      positionSelBoxes();
+    };
+    const up = () => {
+      document.removeEventListener('pointermove', move, true);
+      document.removeEventListener('pointerup', up, true);
+      canvasBusy = false; commitMark(); saveCurrentVersion(); updateSelBoxes();
+    };
+    document.addEventListener('pointermove', move, true);
+    document.addEventListener('pointerup', up, true);
+  }
+  handleL.addEventListener('pointerdown', e => startResize(e, 'l'));
+  handleR.addEventListener('pointerdown', e => startResize(e, 'r'));
 
   const inOverlay = e => e.composedPath().includes(hostEl);
   const hasText = el => [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim().length);
@@ -896,18 +941,35 @@
   // While expanded: a click (no drag) selects one (shift-click toggles into a
   // group); a drag draws a marquee and selects every text element it overlaps.
   let mDown = false, mMoved = false, mx0 = 0, my0 = 0, mShift = false;
+  let movePending = false, moveStarted = false, mvx0 = 0, mvy0 = 0, canvasBusy = false;
   function onPD(e) {
-    if (inOverlay(e) || !selecting()) return;
+    if (inOverlay(e) || !selecting() || canvasBusy) return;
     e.preventDefault(); e.stopPropagation();
     mDown = true; mMoved = false; mx0 = e.clientX; my0 = e.clientY; mShift = e.shiftKey;
+    // Pressing the single selected element MAY begin a move-drag — decided on first movement, so a
+    // plain click still falls through to normal select (you can click a child to drill into it).
+    const tgt = e.composedPath()[0];
+    movePending = !mShift && !!active && selection.length === 1 && !!tgt && (tgt === active || active.contains(tgt));
+    moveStarted = false;
+    if (movePending) { const m = new DOMMatrix(getComputedStyle(active).transform); mvx0 = Math.round(m.m41); mvy0 = Math.round(m.m42); }
   }
   function onPM(e) {
+    if (canvasBusy) return;
     if (mDown) {
       if (!mMoved && Math.hypot(e.clientX - mx0, e.clientY - my0) > 6) mMoved = true;
       if (mMoved) {
-        const l = Math.min(mx0, e.clientX), t = Math.min(my0, e.clientY), r = Math.max(mx0, e.clientX), b = Math.max(my0, e.clientY);
-        marquee.style.display = 'block'; marquee.style.left = l + 'px'; marquee.style.top = t + 'px'; marquee.style.width = (r - l) + 'px'; marquee.style.height = (b - t) + 'px';
-        hideHover();
+        if (movePending) {                                   // drag the single selected element (translate)
+          if (!moveStarted) { moveStarted = true; pushUndo(); }
+          txX = mvx0 + (e.clientX - mx0); txY = mvy0 + (e.clientY - my0);
+          active.style.transform = `translate(${txX}px,${txY}px)`; trackEdited(active);
+          vEl('translateX').textContent = txX + 'px'; vEl('translateY').textContent = txY + 'px';
+          updateRowTrack('translateX', txX); updateRowTrack('translateY', txY);
+          positionSelBoxes(); hideHover();
+        } else {
+          const l = Math.min(mx0, e.clientX), t = Math.min(my0, e.clientY), r = Math.max(mx0, e.clientX), b = Math.max(my0, e.clientY);
+          marquee.style.display = 'block'; marquee.style.left = l + 'px'; marquee.style.top = t + 'px'; marquee.style.width = (r - l) + 'px'; marquee.style.height = (b - t) + 'px';
+          hideHover();
+        }
       }
       return;
     }
@@ -916,6 +978,11 @@
   function onPU(e) {
     if (!mDown) return;
     mDown = false; marquee.style.display = 'none';
+    if (moveStarted) {                       // finished dragging the element to a new position
+      movePending = false; moveStarted = false;
+      commitMark(); saveCurrentVersion(); updateSelBoxes(); hideHover(); return;
+    }
+    movePending = false;
     if (mMoved) {
       const l = Math.min(mx0, e.clientX), t = Math.min(my0, e.clientY), r = Math.max(mx0, e.clientX), b = Math.max(my0, e.clientY);
       const hits = elementsInRect(l, t, r, b);
@@ -1388,6 +1455,22 @@
   // ── Keyboard ──
   function onKey(e) {
     if (e.key === 'Escape' && selection.length) { setSelection([]); return; }
+    // Arrow keys nudge the single selected element (transform): 1px, or 10px with Shift.
+    if (active && selection.length === 1 && !e.metaKey && !e.ctrlKey && !e.altKey && selecting() &&
+        (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      const ae = root.activeElement, de = document.activeElement;   // don't hijack arrows while typing in a field
+      if ((ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName)) || (de && /^(INPUT|TEXTAREA)$/.test(de.tagName))) return;
+      e.preventDefault();
+      const step = e.shiftKey ? 10 : 1;
+      const m = new DOMMatrix(getComputedStyle(active).transform); txX = Math.round(m.m41); txY = Math.round(m.m42);
+      if (e.key === 'ArrowLeft') txX -= step; else if (e.key === 'ArrowRight') txX += step;
+      else if (e.key === 'ArrowUp') txY -= step; else txY += step;
+      active.style.transform = `translate(${txX}px,${txY}px)`; trackEdited(active);
+      vEl('translateX').textContent = txX + 'px'; vEl('translateY').textContent = txY + 'px';
+      updateRowTrack('translateX', txX); updateRowTrack('translateY', txY);
+      commitMark(); saveCurrentVersion(); positionSelBoxes();
+      return;
+    }
     if (!e.metaKey && !e.ctrlKey) return;
     if (e.key === 'z' && !e.shiftKey) { e.preventDefault(); popUndo(); }
     else if (e.key === 'c' && active && !window.getSelection().toString()) { e.preventDefault(); triggerCopy(); }
