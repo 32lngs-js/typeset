@@ -359,8 +359,9 @@
             <div class="section">
               <div class="section-head" data-sec="layout"><span>Layout</span>${CHEV_SEC}</div>
               <div class="section-content" id="sec-layout"><div class="section-content-inner">
-                ${slider('maxWidth','Width',40,1600,1,'—')}
+                ${slider('maxWidth','Width',40,3000,1,'—')}
                 ${slider('padding','Padding',0,80,1,'—')}
+                ${slider('marginTop','Space',0,200,1,'—')}
                 ${slider('borderRadius','Radius',0,50,1,'—')}
                 ${slider('opacity','Opacity',0,100,1,'—')}
               </div></div>
@@ -462,7 +463,7 @@
   let currentVersionIdx = 0;
   const badgeNodes = [];  // {el, node}
 
-  const emptySnap = el => ({ el, fontSize: '', fontWeight: '', lineHeight: '', letterSpacing: '', fontFamily: '', textAlign: '', transform: '', maxWidth: '', padding: '', borderRadius: '', opacity: '', fontStyle: '', textDecoration: '' });
+  const emptySnap = el => ({ el, fontSize: '', fontWeight: '', lineHeight: '', letterSpacing: '', fontFamily: '', textAlign: '', transform: '', maxWidth: '', marginTop: '', padding: '', borderRadius: '', opacity: '', fontStyle: '', textDecoration: '' });
   // As new elements are touched, backfill every existing version with an empty
   // snapshot so switching to an OLDER version correctly clears them.
   function trackEdited(el) {
@@ -472,11 +473,11 @@
   }
   function captureAllStyles() {
     return [...edited].map(el => ({ el, fontSize: el.style.fontSize, fontWeight: el.style.fontWeight, lineHeight: el.style.lineHeight,
-      letterSpacing: el.style.letterSpacing, fontFamily: el.style.fontFamily, textAlign: el.style.textAlign, transform: el.style.transform, maxWidth: el.style.maxWidth, padding: el.style.padding, borderRadius: el.style.borderRadius, opacity: el.style.opacity, fontStyle: el.style.fontStyle, textDecoration: el.style.textDecoration }));
+      letterSpacing: el.style.letterSpacing, fontFamily: el.style.fontFamily, textAlign: el.style.textAlign, transform: el.style.transform, maxWidth: el.style.maxWidth, marginTop: el.style.marginTop, padding: el.style.padding, borderRadius: el.style.borderRadius, opacity: el.style.opacity, fontStyle: el.style.fontStyle, textDecoration: el.style.textDecoration }));
   }
   function applyAllStyles(arr) {
     arr.forEach(o => { const s = o.el.style; s.fontSize = o.fontSize; s.fontWeight = o.fontWeight; s.lineHeight = o.lineHeight;
-      s.letterSpacing = o.letterSpacing; s.fontFamily = o.fontFamily; s.textAlign = o.textAlign; s.transform = o.transform; s.maxWidth = o.maxWidth; s.padding = o.padding; s.borderRadius = o.borderRadius; s.opacity = o.opacity; s.fontStyle = o.fontStyle; s.textDecoration = o.textDecoration; });
+      s.letterSpacing = o.letterSpacing; s.fontFamily = o.fontFamily; s.textAlign = o.textAlign; s.transform = o.transform; s.maxWidth = o.maxWidth; s.marginTop = o.marginTop; s.padding = o.padding; s.borderRadius = o.borderRadius; s.opacity = o.opacity; s.fontStyle = o.fontStyle; s.textDecoration = o.textDecoration; });
   }
   function saveCurrentVersion() { versions[currentVersionIdx].styles = captureAllStyles(); updateBadges(); }
   function switchVersion(idx) {
@@ -1027,11 +1028,13 @@
     updateRowTrack('translateX', txX); updateRowTrack('translateY', txY);
     const pad = Math.round(parseFloat(cs.paddingTop)) || 0;
     const rad = Math.round(parseFloat(cs.borderRadius)) || 0;
+    const mt = Math.round(parseFloat(cs.marginTop)) || 0;
     updateRowTrack('maxWidth', wid);
     vEl('padding').textContent = pad + 'px';
     vEl('borderRadius').textContent = rad + 'px';
+    vEl('marginTop').textContent = mt + 'px';
     const opa = Math.round((parseFloat(cs.opacity) || 1) * 100);
-    updateRowTrack('padding', pad); updateRowTrack('borderRadius', rad);
+    updateRowTrack('padding', pad); updateRowTrack('borderRadius', rad); updateRowTrack('marginTop', mt);
     vEl('opacity').textContent = opa + '%';
     updateRowTrack('opacity', opa);
     setFontUI(cs.fontFamily);
@@ -1054,6 +1057,7 @@
     if (prop === 'translateY') return txY;
     if (prop === 'maxWidth') return cs.maxWidth === 'none' ? Math.round(parseFloat(cs.width)) : Math.round(parseFloat(cs.maxWidth));
     if (prop === 'padding') return Math.round(parseFloat(cs.paddingTop)) || 0;
+    if (prop === 'marginTop') return Math.round(parseFloat(cs.marginTop)) || 0;
     if (prop === 'borderRadius') return Math.round(parseFloat(cs.borderRadius)) || 0;
     if (prop === 'opacity') return Math.round((parseFloat(cs.opacity) || 1) * 100);
     return 0;
@@ -1070,6 +1074,7 @@
       else if (prop === 'letterSpacing') s.letterSpacing = val + 'em';
       else if (prop === 'maxWidth') s.maxWidth = val + 'px';
       else if (prop === 'padding') s.padding = val + 'px';
+      else if (prop === 'marginTop') s.marginTop = val + 'px';
       else if (prop === 'borderRadius') s.borderRadius = val + 'px';
       else if (prop === 'opacity') s.opacity = val / 100;
       else if (prop === 'translateX' || prop === 'translateY') s.transform = `translate(${txX}px,${txY}px)`;
@@ -1156,7 +1161,7 @@
   }));
   resetBtn.addEventListener('click', () => {
     if (!selection.length) return; pushUndo();
-    const props = ['fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'fontFamily', 'textAlign', 'transform', 'maxWidth', 'padding', 'borderRadius', 'opacity', 'fontStyle', 'textDecoration'];
+    const props = ['fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'fontFamily', 'textAlign', 'transform', 'maxWidth', 'marginTop', 'padding', 'borderRadius', 'opacity', 'fontStyle', 'textDecoration'];
     selection.forEach(el => { props.forEach(p => el.style[p] = ''); el.__tsMark = null; });
     txX = 0; txY = 0; if (active) syncFrom(active); saveCurrentVersion(); updateSelBoxes();
   });
@@ -1182,7 +1187,7 @@
   const PROP_MAP = [
     ['fontFamily', 'font-family'], ['fontSize', 'font-size'], ['fontWeight', 'font-weight'],
     ['lineHeight', 'line-height'], ['letterSpacing', 'letter-spacing'], ['textAlign', 'text-align'],
-    ['maxWidth', 'max-width'], ['padding', 'padding'], ['borderRadius', 'border-radius'],
+    ['maxWidth', 'max-width'], ['padding', 'padding'], ['marginTop', 'margin-top'], ['borderRadius', 'border-radius'],
     ['opacity', 'opacity'], ['fontStyle', 'font-style'], ['textDecoration', 'text-decoration'],
   ];
   // Collect the current edited state: blocks (for the clipboard) + mcpChanges (for the agent).
@@ -1199,6 +1204,7 @@
         s.textAlign && `text-align: ${s.textAlign};`,
         s.maxWidth && `max-width: ${s.maxWidth};`,
         s.padding && `padding: ${s.padding};`,
+        s.marginTop && `margin-top: ${s.marginTop};`,
         s.borderRadius && `border-radius: ${s.borderRadius};`,
         s.opacity && `opacity: ${s.opacity};`,
         s.fontStyle && `font-style: ${s.fontStyle};`,
@@ -1211,7 +1217,10 @@
         // dedups by selector+property+project, so re-committing full state (watch mode) is safe.
         if (s[js]) mcpChanges.push({ selector: sel, property: css, value: s[js], previousValue: cs[js] || null, project: TS_PROJECT });
       });
-      // Position drags (transform) are NOT queued as typography changes; they still appear in the copied CSS.
+      // Position (drag or X/Y sliders) writes `transform`; queue it too so on-canvas moves persist
+      // to source like every other prop. Daemon dedups by selector+property+project.
+      if (s.transform && s.transform !== 'none')
+        mcpChanges.push({ selector: sel, property: 'transform', value: s.transform, previousValue: cs.transform || null, project: TS_PROJECT });
     });
     return { blocks, mcpChanges };
   }
