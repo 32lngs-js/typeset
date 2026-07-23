@@ -820,11 +820,15 @@
   // that spans nearly the whole page — so hovering a container's padding never
   // washes the whole preview blue.
   const SKIP_TAGS = new Set(['html', 'body', 'head', 'script', 'style', 'noscript', 'link', 'meta', 'svg', 'path', 'br', 'hr']);
+  // Media elements are grabbable even without text (photos, video) — this is what lets the photography
+  // page's images be selected, dragged, and resized, not just text.
+  const MEDIA_TAGS = new Set(['img', 'picture', 'video', 'canvas']);
+  const isMedia = el => MEDIA_TAGS.has(el.tagName.toLowerCase());
   function pickable(el) {
     if (!el || el === hostEl || hostEl.contains(el)) return false;
     if (el === document.documentElement || el === document.body) return false;
     if (SKIP_TAGS.has(el.tagName.toLowerCase())) return false;
-    if (!hasText(el)) return false;                              // must carry its own text (not a wrapper)
+    if (!hasText(el) && !isMedia(el)) return false;             // must carry its own text, OR be media (img/video/…)
     const r = el.getBoundingClientRect();
     if (r.width === 0 || r.height === 0) return false;
     if (r.width > window.innerWidth * 0.95 && r.height > window.innerHeight * 0.9) return false;  // not a page-sized wrapper
@@ -930,7 +934,7 @@
   function elementsInRect(l, t, r, b) {
     const hits = [];
     document.body.querySelectorAll('*').forEach(el => {
-      if (hostEl.contains(el) || !hasText(el)) return;
+      if (hostEl.contains(el) || (!hasText(el) && !isMedia(el))) return;
       const rc = el.getBoundingClientRect();
       if (rc.width === 0 || rc.height === 0) return;
       if (rc.left < r && rc.right > l && rc.top < b && rc.bottom > t) hits.push(el);   // AABB overlap (agentation-style)
@@ -941,29 +945,29 @@
   // While expanded: a click (no drag) selects one (shift-click toggles into a
   // group); a drag draws a marquee and selects every text element it overlaps.
   let mDown = false, mMoved = false, mx0 = 0, my0 = 0, mShift = false;
-  let movePending = false, moveStarted = false, mvx0 = 0, mvy0 = 0, canvasBusy = false;
+  let movePending = false, moveStarted = false, moveStarts = [], canvasBusy = false;
   function onPD(e) {
     if (inOverlay(e) || !selecting() || canvasBusy) return;
     e.preventDefault(); e.stopPropagation();
     mDown = true; mMoved = false; mx0 = e.clientX; my0 = e.clientY; mShift = e.shiftKey;
-    // Pressing the single selected element MAY begin a move-drag — decided on first movement, so a
-    // plain click still falls through to normal select (you can click a child to drill into it).
+    // Pressing ANY selected element MAY begin a move-drag of the whole selection — decided on first
+    // movement, so a plain click still falls through to normal select (you can drill into children).
     const tgt = e.composedPath()[0];
-    movePending = !mShift && !!active && selection.length === 1 && !!tgt && (tgt === active || active.contains(tgt));
+    movePending = !mShift && !!active && !!tgt && selection.some(el => el === tgt || el.contains(tgt));
     moveStarted = false;
-    if (movePending) { const m = new DOMMatrix(getComputedStyle(active).transform); mvx0 = Math.round(m.m41); mvy0 = Math.round(m.m42); }
+    if (movePending) moveStarts = selection.map(el => { const m = new DOMMatrix(getComputedStyle(el).transform); return { el, x0: Math.round(m.m41), y0: Math.round(m.m42) }; });
   }
   function onPM(e) {
     if (canvasBusy) return;
     if (mDown) {
       if (!mMoved && Math.hypot(e.clientX - mx0, e.clientY - my0) > 6) mMoved = true;
       if (mMoved) {
-        if (movePending) {                                   // drag the single selected element (translate)
+        if (movePending) {                                   // drag ALL selected elements together (translate)
           if (!moveStarted) { moveStarted = true; pushUndo(); }
-          txX = mvx0 + (e.clientX - mx0); txY = mvy0 + (e.clientY - my0);
-          active.style.transform = `translate(${txX}px,${txY}px)`; trackEdited(active);
-          vEl('translateX').textContent = txX + 'px'; vEl('translateY').textContent = txY + 'px';
-          updateRowTrack('translateX', txX); updateRowTrack('translateY', txY);
+          const dx = e.clientX - mx0, dy = e.clientY - my0;
+          moveStarts.forEach(o => { o.el.style.transform = `translate(${o.x0 + dx}px,${o.y0 + dy}px)`; trackEdited(o.el); });
+          const a = moveStarts.find(o => o.el === active);
+          if (a) { txX = a.x0 + dx; txY = a.y0 + dy; vEl('translateX').textContent = txX + 'px'; vEl('translateY').textContent = txY + 'px'; updateRowTrack('translateX', txX); updateRowTrack('translateY', txY); }
           positionSelBoxes(); hideHover();
         } else {
           const l = Math.min(mx0, e.clientX), t = Math.min(my0, e.clientY), r = Math.max(mx0, e.clientX), b = Math.max(my0, e.clientY);
