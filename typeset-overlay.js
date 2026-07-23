@@ -160,18 +160,6 @@
     .pb { overflow-y:visible; max-height:none; position:relative; }
     .select-hint { font-size:14px; color:var(--hint-col); text-align:center; letter-spacing:0.02em; display:none; }
     .select-hint.visible { display:flex; align-items:center; justify-content:center; min-height:160px; padding:12px; text-align:center; }
-    .ts-coach { background:var(--sl-track); border:1px solid var(--border-sub); border-radius:var(--radius); padding:10px 12px; margin-bottom:10px; display:none; }
-    .ts-coach.visible { display:block; }
-    .ts-coach-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
-    .ts-coach-title { font-size:13px; font-weight:600; color:var(--text-hi); letter-spacing:-0.01em; }
-    .ts-coach-x { background:transparent; border:none; color:var(--text-lo); cursor:pointer; font-size:14px; line-height:1; padding:2px 4px; border-radius:6px; }
-    .ts-coach-x:hover { color:var(--text-hi); background:var(--bg-hover); }
-    .ts-coach-steps { list-style:decimal; margin:0 0 8px; padding-left:18px; }
-    .ts-coach-steps li { font-size:12.5px; color:var(--text-mid); line-height:1.75; }
-    .ts-coach-steps svg { width:13px; height:13px; vertical-align:-2px; }
-    .ts-coach-note { font-size:11.5px; color:var(--text-lo); line-height:1.5; margin-bottom:9px; }
-    .ts-coach-got { width:100%; height:30px; background:var(--accent); color:#fff; border:none; border-radius:var(--radius); font:inherit; font-size:12.5px; font-weight:600; cursor:pointer; transition:filter .15s; }
-    .ts-coach-got:hover { filter:brightness(1.1); }
     /* matches the selected element's box (.ts-selbox): faint blue fill + ~55% blue outline */
     .ts-nowatch { display:none; margin-bottom:10px; padding:8px 10px; border-radius:var(--radius); font-size:11.5px; line-height:1.45;
       background:rgba(60,130,247,0.05); color:#1d4ed8; border:1px solid rgba(60,130,247,0.55); }
@@ -333,19 +321,6 @@
         <div class="flip" id="flip">
         <div class="face-front" id="frontFace">
         <div class="pb" id="panelBody">
-          <div class="ts-coach" id="coach">
-            <div class="ts-coach-head">
-              <span class="ts-coach-title">Welcome to TypeSet</span>
-              <button class="ts-coach-x" id="coachClose" title="Dismiss">✕</button>
-            </div>
-            <ol class="ts-coach-steps">
-              <li><b>Click</b> any text on the page</li>
-              <li><b>Drag</b> the values in this panel to change it</li>
-              <li>Turn on <b>Watch</b> ${WATCH} to send edits to your agent</li>
-            </ol>
-            <div class="ts-coach-note">Edits preview live here. Watch (or Copy) is what writes them into your code.</div>
-            <button class="ts-coach-got" id="coachGot">Got it</button>
-          </div>
           <div class="toolbar" id="toolbar">
             <button class="tb-btn" id="addVersionBtn" title="Add version">${ADDV}</button>
             <div class="version-wrap" id="versionWrap">
@@ -428,7 +403,7 @@
           </div>
           <div class="set-list">
             <div class="set-row"><span class="set-label">Show tips</span><button class="set-sw" id="setTips" role="switch" aria-checked="true"><span class="set-knob"></span></button></div>
-            <div class="set-hint" style="padding:0 0 4px">Guided tips and hover tooltips.</div>
+            <div class="set-hint" style="padding:0 0 4px">Hover tooltips on the toolbar buttons.</div>
             <div class="set-sep"></div>
             <div class="set-status-row"><span class="set-label">Routing to</span><span class="set-val" id="setProject">—</span></div>
             <div class="set-status-row"><span class="set-label">Connection</span><span class="set-val" id="setDaemon">checking…</span></div>
@@ -1263,7 +1238,7 @@
   copyBtn.addEventListener('click', triggerCopy);
 
   // --- Watch mode: stream edits to the agent live (pairs with the agent's watch_typeset_changes loop) ---
-  let watchMode = localStorage.getItem('ts-watch') === '1';   // off by default; the user turns it on deliberately
+  let watchMode = false;   // always OFF at launch — never auto-restored from localStorage; the user turns it on deliberately each session
   let watchTimer = null;
   function commitNow() { postChanges(collectChanges().mcpChanges); }
   // Called from commitMark on every edit; debounced so a continuous scrub commits once when it settles.
@@ -1315,22 +1290,12 @@
   }
   watchBtn.addEventListener('click', () => {
     watchMode = !watchMode;
-    localStorage.setItem('ts-watch', watchMode ? '1' : '0');
     renderWatch();
     setWatchPolling(watchMode);
     if (watchMode) commitNow();
   });
   renderWatch();
   setWatchPolling(watchMode);
-
-  // ── First-run coach: a one-time how-it-works card, dismissed forever via localStorage.
-  // (Settings can re-show it by clearing the 'ts-coach' key.) It lives inside the panel body,
-  // so it reveals itself the first time the user expands the dial.
-  const coach = $('coach');
-  function dismissCoach() { localStorage.setItem('ts-coach', '0'); coach.classList.remove('visible'); }
-  if (localStorage.getItem('ts-coach') !== '0') coach.classList.add('visible');
-  $('coachClose').addEventListener('click', e => { e.stopPropagation(); dismissCoach(); });
-  $('coachGot').addEventListener('click', e => { e.stopPropagation(); dismissCoach(); });
 
   // ── Settings panel: the header gear flips the pane to a back face. It rotates the pane to
   // its vertical edge, swaps faces there (invisible), then rotates the new face in. Driven by
@@ -1376,7 +1341,7 @@
   settingsBtn.addEventListener('click', e => { e.stopPropagation(); doFlip(!onSettings); });
   settingsBack.addEventListener('click', e => { e.stopPropagation(); doFlip(false); });
 
-  // Tips = ONE feature: the first-run coach AND the hover tooltips, behind a single toggle.
+  // Tips = the hover tooltips on the toolbar buttons, behind a single toggle.
   const swTips = $('setTips');
   const setSw = (el, on) => el.setAttribute('aria-checked', on ? 'true' : 'false');
   const swOn = el => el.getAttribute('aria-checked') === 'true';
@@ -1388,13 +1353,10 @@
   }
   let tipsOn = localStorage.getItem('ts-tips') !== '0';
   applyTooltips(tipsOn);
-  if (!tipsOn) coach.classList.remove('visible');
   function setTips(on) {
     tipsOn = on;
     localStorage.setItem('ts-tips', on ? '1' : '0');
     applyTooltips(on);
-    if (on) { localStorage.removeItem('ts-coach'); coach.classList.add('visible'); }
-    else dismissCoach();
     setSw(swTips, on);
   }
   swTips.addEventListener('click', () => setTips(!swOn(swTips)));
