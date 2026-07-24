@@ -286,6 +286,13 @@
     .ts-handle { position:fixed; width:14px; height:14px; box-sizing:border-box; background:rgba(60,130,247,1);
       border:2px solid #fff; border-radius:50%; box-shadow:0 1px 4px rgba(0,0,0,0.35); cursor:ew-resize;
       z-index:2147483647; pointer-events:auto; display:none; }
+    /* on-canvas "select the frame around this" button — the visible way to climb to the container */
+    .ts-frame { position:fixed; display:none; align-items:center; justify-content:center;
+      width:24px; height:24px; box-sizing:border-box; background:rgba(60,130,247,1); color:#fff;
+      border:2px solid #fff; border-radius:7px; box-shadow:0 1px 5px rgba(0,0,0,0.4); cursor:pointer;
+      z-index:2147483647; pointer-events:auto; }
+    .ts-frame:hover { background:rgba(40,110,230,1); }
+    .ts-frame svg { width:13px; height:13px; }
     /* dark pill descriptor label (agentation hover tooltip) */
     .ts-label { position:fixed; display:none; z-index:2147483647; pointer-events:none;
       font:500 11px/1.3 system-ui,-apple-system,sans-serif; color:#fff; background:rgba(0,0,0,0.85);
@@ -797,15 +804,32 @@
   const handleL = document.createElement('div'); handleL.className = 'ts-handle';
   const handleR = document.createElement('div'); handleR.className = 'ts-handle';
   root.appendChild(handleL); root.appendChild(handleR);
+  // "Select the frame around this" button — the visible, discoverable way to climb to the container
+  // (Alt/Option-click does the same for those who know it). Rides the top-left of the selection box.
+  const FRAME_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V5a1 1 0 0 1 1-1h3"/><path d="M20 8V5a1 1 0 0 0-1-1h-3"/><path d="M4 16v3a1 1 0 0 0 1 1h3"/><path d="M20 16v3a1 1 0 0 1-1 1h-3"/></svg>';
+  const frameBtn = document.createElement('div'); frameBtn.className = 'ts-frame'; frameBtn.innerHTML = FRAME_ICON;
+  frameBtn.title = 'Select the frame around this (⌥-click too)';
+  root.appendChild(frameBtn);
+  frameBtn.addEventListener('pointerenter', () => { const par = active && parentPick(active); if (par) { boxTo(hoverBox, par); showLabel(par); } });
+  frameBtn.addEventListener('pointerleave', () => hideHover());
+  frameBtn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); const par = active && parentPick(active); if (par) { setSelection([par]); hideHover(); } });
   function positionHandles() {
     const show = !!active && selection.length === 1 && selecting() && !minimized;
     handleL.style.display = handleR.style.display = show ? 'block' : 'none';
+    // The frame button uses the same single-selection gate, but only appears when there's a bigger
+    // container to climb into (so it never dead-ends).
+    const par = show ? parentPick(active) : null;
+    frameBtn.style.display = par ? 'flex' : 'none';
     if (!show) return;
     // Keep the dots reachable: for a tall element (e.g. a whole container) the true vertical
     // center can be off-screen, so ride them at the viewport's middle along the element's edges.
     const r = active.getBoundingClientRect(), cy = clamp(r.top + r.height / 2, 24, window.innerHeight - 24);
     handleL.style.left = (r.left - 7) + 'px'; handleL.style.top = (cy - 7) + 'px';
     handleR.style.left = (r.right - 7) + 'px'; handleR.style.top = (cy - 7) + 'px';
+    if (par) {
+      let ft = r.top - 30; if (ft < 4) ft = Math.min(r.top + 4, window.innerHeight - 28);
+      frameBtn.style.left = clamp(r.left - 2, 4, window.innerWidth - 28) + 'px'; frameBtn.style.top = ft + 'px';
+    }
   }
   function startResize(e, side) {
     if (!active) return;
@@ -846,16 +870,33 @@
   // The "Width" control is polymorphic: a photo resizes by its own `width` (so it grows AND shrinks,
   // overriding a responsive width:100%), while a text block resizes by `max-width` (its measure).
   const widthProp = el => isMedia(el) ? 'width' : 'maxWidth';
-  // Alt/Option-click climbs to the nearest container ancestor, so you can grab a wrapper (e.g. the
-  // column) and resize IT — every child, including width:100% images, reflows: "expand width at once".
+  // Climb to the FRAME around this element — the nearest ancestor that's meaningfully BIGGER than
+  // the current selection (not a same-bounds styling wrapper), so every "expand" visibly moves the
+  // outline. Grab a wrapper (e.g. the column) and resize IT — children, incl. width:100% images,
+  // reflow: "expand width all at once". Reached by the on-canvas frame button and by Alt/Option-click.
   function parentPick(el) {
-    let p = el && el.parentElement;
+    if (!el) return null;
+    const r0 = el.getBoundingClientRect();
+    let p = el.parentElement;
     while (p && p !== document.body && p !== document.documentElement && p !== hostEl && !hostEl.contains(p)) {
       const r = p.getBoundingClientRect();
-      if (r.width > 0 && r.height > 0 && !SKIP_TAGS.has(p.tagName.toLowerCase())) return p;
+      if (r.width > 0 && r.height > 0 && !SKIP_TAGS.has(p.tagName.toLowerCase())
+          && (r.width - r0.width > 24 || r.height - r0.height > 24)) return p;   // visibly larger only
       p = p.parentElement;
     }
     return null;
+  }
+  // Plain-English name for a container, by LAYOUT not class names (never show `div.flex`).
+  function describeContainer(el) {
+    const cs = getComputedStyle(el), tag = el.tagName.toLowerCase();
+    if (tag === 'figure') return 'Figure';
+    if (tag === 'ul' || tag === 'ol') return 'List';
+    const kids = [...el.children];
+    const mediaKids = kids.filter(k => isMedia(k) || (k.querySelector && k.querySelector('img,picture,video,canvas')));
+    if (cs.display.includes('grid')) return mediaKids.length >= 2 ? 'Gallery' : 'Grid';
+    if (cs.display.includes('flex')) return cs.flexDirection.startsWith('row') ? 'Row' : 'Column';
+    if (['section', 'article', 'header', 'footer', 'main', 'aside', 'nav'].includes(tag)) return 'Section';
+    return kids.length > 1 ? 'Column' : 'Group';
   }
   function pickable(el) {
     if (!el || el === hostEl || hostEl.contains(el)) return false;
@@ -882,12 +923,9 @@
     if (tag === 'code') return (text && text.length < 30) ? `code: \`${text}\`` : 'code';
     if (tag === 'pre') return 'code block';
     if (tag === 'img') { const alt = el.getAttribute('alt'); return alt ? `image "${alt.slice(0, 30)}"` : 'image'; }
-    if (['div', 'section', 'article', 'nav', 'header', 'footer', 'aside', 'main'].includes(tag)) {
-      const aria = el.getAttribute('aria-label'); if (aria) return `${tag} [${aria}]`;
-      const role = el.getAttribute('role'); if (role) return role;
-      const cls = typeof el.className === 'string' ? el.className.trim() : '';
-      if (cls) return cls.split(/[\s_-]+/).filter(Boolean).slice(0, 2).join(' ');   // e.g. "flex flex-col" -> "flex flex"
-      return tag;
+    if (['div', 'section', 'article', 'nav', 'header', 'footer', 'aside', 'main', 'figure', 'ul', 'ol'].includes(tag)) {
+      const aria = el.getAttribute('aria-label'); if (aria) return aria;   // human-authored, meaningful
+      return describeContainer(el);                                        // Figure / Row / Column / Gallery / Section / List / Group
     }
     return text ? `${tag} "${text.slice(0, 30)}"` : tag;
   }
@@ -1010,6 +1048,9 @@
       }
       return;
     }
+    // Over the on-canvas frame button, let ITS pointerenter drive the container preview — don't let
+    // this handler clear it (elementFromPoint resolves to the shadow host, which isn't pickable).
+    if (e.composedPath().some(n => n.classList && n.classList.contains('ts-frame'))) return;
     if (selecting()) {
       const el = document.elementFromPoint(e.clientX, e.clientY);
       if (e.altKey) {                        // preview the container Alt-click would grab
