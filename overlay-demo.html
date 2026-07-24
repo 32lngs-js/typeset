@@ -18,6 +18,15 @@
     li { font-size: 17px; margin-bottom: 8px; }
     .cta { display: inline-block; margin-top: 16px; font-family: system-ui, sans-serif; font-size: 16px; font-weight: 600; background: #1a1a1a; color: #fff; padding: 12px 22px; border-radius: 8px; text-decoration: none; }
     .note { font-family: system-ui, sans-serif; font-size: 13px; color: #999; margin-top: 64px; padding-top: 20px; border-top: 1px solid #eee; }
+
+    /* Media — also selectable/editable by the overlay (it can size, position, and round images too) */
+    figure { margin: 36px 0; }
+    figure img { display: block; width: 100%; height: auto; border-radius: 12px; background: #eee; }
+    figure.hero { margin: 0 0 40px; }
+    figure.hero img { aspect-ratio: 3 / 2; object-fit: cover; }
+    figcaption { font-family: system-ui, sans-serif; font-size: 13px; color: #999; margin-top: 10px; line-height: 1.5; }
+    .gallery { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 36px 0; }
+    .gallery img { display: block; width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 12px; background: #eee; }
   </style>
 </head>
 <body>
@@ -26,9 +35,25 @@
     <h1>Typography is the interface</h1>
     <h2 class="tag">Most of a product's voice lives in its type. This page is here so you can scrub it.</h2>
 
+    <figure class="hero">
+      <img
+        src="https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=1600&q=80"
+        alt="A sweeping curve of library shelves stacked with books"
+        loading="eager" decoding="async" />
+      <figcaption>Every book on that shelf is a typographic decision. So is every screen you ship.</figcaption>
+    </figure>
+
     <p>This is a sample host page. Open the TypeSet overlay (it loads automatically here), then click any text element to inspect and edit its live typography — size, weight, line height, letter spacing, width, and family.</p>
 
     <p>Try the new bits: <strong>shift-click</strong> several elements to select them at once, or <strong>drag a rectangle</strong> across a region to marquee-select. Then scrub a slider and watch every selected element change together. Hit <strong>Copy CSS</strong> and you get one selector block per element.</p>
+
+    <figure>
+      <img
+        src="https://images.unsplash.com/photo-1487014679447-9f8336841d58?auto=format&fit=crop&w=1200&q=80"
+        alt="A laptop on a desk showing a product landing page"
+        loading="lazy" decoding="async" />
+      <figcaption>Images and media are fair game too — select a figure to resize, reposition, or round it.</figcaption>
+    </figure>
 
     <h3>What you can change</h3>
     <ul>
@@ -38,14 +63,25 @@
       <li>Alignment and X / Y position</li>
     </ul>
 
+    <div class="gallery">
+      <img
+        src="https://images.unsplash.com/photo-1516962126636-27ad087061cc?auto=format&fit=crop&w=900&q=80"
+        alt="A vintage Polaroid instant camera on a white surface"
+        loading="lazy" decoding="async" />
+      <img
+        src="https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=900&q=80"
+        alt="Source code on a dark screen"
+        loading="lazy" decoding="async" />
+    </div>
+
     <p>Everything you do is a live inline style, so it resets on reload. The Copy button is how you take the values back to your real stylesheet.</p>
 
     <a class="cta" href="#">Get started</a>
 
-    <div class="note">TypeSet overlay demo. The panel top-right is the tool, not part of this page.</div>
+    <div class="note">TypeSet overlay demo. The panel top-right is the tool, not part of this page. Photos via Unsplash.</div>
   </div>
 
-  <!-- auto-load the overlay so this page shows it live -->
+  <!-- auto-load the overlay so this page shows it live (relative path -> latest published overlay) -->
   <script src="typeset-overlay.js"></script>
 </body>
 </html>
