@@ -117,6 +117,9 @@
     .ph-right { display:flex; align-items:center; gap:5px; }
     .icon-btn { width:22px; height:22px; display:flex; align-items:center; justify-content:center; border:none; background:none; cursor:pointer; border-radius:6px; color:var(--icon-col); transition:color .12s,background .12s; }
     .icon-btn:hover { background:var(--bg-hover); color:var(--text-hi); }
+    /* trash (scrap all pending changes): muted until there's something to scrap, then a red tint */
+    .trash-btn.active { color:#e5484d; }
+    .trash-btn.active:hover { background:rgba(229,72,77,0.12); color:#e5484d; }
     .tb-btn.copied { color:var(--text-mid); }
     .tb-btn.watching { color:var(--accent); background:var(--bg-hover); }
     .tb-btn.watching svg circle { animation:ts-live 1.5s ease-in-out infinite; }
@@ -232,8 +235,10 @@
     .align-btn:hover { background:var(--bg-hover); color:var(--text-mid); }
     .align-btn.active { background:var(--sl-fill); color:var(--text-hi); }
     .reset-row { padding:0 0 12px; margin-top:2px; border-top:1px solid var(--border-sub); padding-top:10px; }
-    .reset-btn { width:100%; padding:8px; background:rgba(255,60,60,0.07); border:none; border-radius:var(--radius); color:rgba(255,100,100,0.6); font-size:13px; font-weight:500; cursor:pointer; transition:background .15s,color .15s; }
-    .reset-btn:hover { background:rgba(255,60,60,0.13); color:rgba(255,120,120,0.9); }
+    /* faint at rest; fills in (.changed) once the selection actually has something to reset */
+    .reset-btn { width:100%; padding:8px; background:rgba(255,60,60,0.04); border:none; border-radius:var(--radius); color:rgba(255,100,100,0.4); font-size:13px; font-weight:500; cursor:pointer; transition:background .18s,color .18s; }
+    .reset-btn.changed { background:rgba(255,60,60,0.12); color:rgba(255,110,110,0.85); }
+    .reset-btn:hover { background:rgba(255,60,60,0.16); color:rgba(255,120,120,0.95); }
 
     .sl-row { padding:0; }
     #controls { display:flex; flex-direction:column; gap:0; transition:opacity .15s; }
@@ -305,10 +310,9 @@
   const ADDV = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h6M15 15h6M18 12v6M4 18h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
   const EYE_OPEN = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4.91516 12.7108C4.63794 12.2883 4.63705 11.7565 4.91242 11.3328C5.84146 9.9033 8.30909 6.74994 12 6.74994C15.6909 6.74994 18.1585 9.9033 19.0876 11.3328C19.3629 11.7565 19.3621 12.2883 19.0848 12.7108C18.1537 14.13 15.6873 17.2499 12 17.2499C8.31272 17.2499 5.8463 14.13 4.91516 12.7108Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 14.25C13.2426 14.25 14.25 13.2426 14.25 12C14.25 10.7574 13.2426 9.75 12 9.75C10.7574 9.75 9.75 10.7574 9.75 12C9.75 13.2426 10.7574 14.25 12 14.25Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const EYE_CLOSED = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M18.6025 9.28503C18.9174 8.9701 19.4364 8.99481 19.7015 9.35271C20.1484 9.95606 20.4943 10.507 20.7342 10.9199C21.134 11.6086 21.1329 12.4454 20.7303 13.1328C20.2144 14.013 19.2151 15.5225 17.7723 16.8193C16.3293 18.1162 14.3852 19.2497 12.0008 19.25C11.4192 19.25 10.8638 19.1823 10.3355 19.0613C9.77966 18.934 9.63498 18.2525 10.0382 17.8493C10.2412 17.6463 10.5374 17.573 10.8188 17.6302C11.1993 17.7076 11.5935 17.75 12.0008 17.75C13.8848 17.7497 15.4867 16.8568 16.7693 15.7041C18.0522 14.5511 18.9606 13.1867 19.4363 12.375C19.5656 12.1543 19.5659 11.8943 19.4373 11.6729C19.2235 11.3049 18.921 10.8242 18.5364 10.3003C18.3085 9.98991 18.3302 9.5573 18.6025 9.28503ZM12.0008 4.75C12.5814 4.75006 13.1358 4.81803 13.6632 4.93953C14.2182 5.06741 14.362 5.74812 13.9593 6.15091C13.7558 6.35435 13.4589 6.42748 13.1771 6.36984C12.7983 6.29239 12.4061 6.25006 12.0008 6.25C10.1167 6.25 8.51415 7.15145 7.23028 8.31543C5.94678 9.47919 5.03918 10.8555 4.56426 11.6729C4.43551 11.8945 4.43582 12.1542 4.56524 12.375C4.77587 12.7343 5.07189 13.2012 5.44718 13.7105C5.67623 14.0213 5.65493 14.4552 5.38193 14.7282C5.0671 15.0431 4.54833 15.0189 4.28292 14.6614C3.84652 14.0736 3.50813 13.5369 3.27129 13.1328C2.86831 12.4451 2.86717 11.6088 3.26739 10.9199C3.78185 10.0345 4.77959 8.51239 6.22247 7.2041C7.66547 5.89584 9.61202 4.75 12.0008 4.75Z" fill="currentColor"/><path d="M5 19L19 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
-  const THEME_DARK = '<svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M15.5 10.4955C15.4037 11.5379 15.0124 12.5314 14.3721 13.3596C13.7317 14.1878 12.8688 14.8165 11.8841 15.1722C10.8995 15.5278 9.83397 15.5957 8.81217 15.3679C7.79038 15.1401 6.8546 14.6259 6.11434 13.8857C5.37408 13.1454 4.85995 12.2096 4.63211 11.1878C4.40427 10.166 4.47215 9.10048 4.82781 8.11585C5.18346 7.13123 5.81218 6.26825 6.64039 5.62791C7.4686 4.98756 8.46206 4.59634 9.5045 4.5C8.89418 5.32569 8.60049 6.34302 8.67685 7.36695C8.75321 8.39087 9.19454 9.35339 9.92058 10.0794C10.6466 10.8055 11.6091 11.2468 12.6331 11.3231C13.657 11.3995 14.6743 11.1058 15.5 10.4955Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  const THEME_LIGHT = '<svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M9.99999 12.7082C11.4958 12.7082 12.7083 11.4956 12.7083 9.99984C12.7083 8.50407 11.4958 7.2915 9.99999 7.2915C8.50422 7.2915 7.29166 8.50407 7.29166 9.99984C7.29166 11.4956 8.50422 12.7082 9.99999 12.7082Z" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 3.9585V5.057M10 14.943V16.041M5.727 5.727L6.507 6.506M13.493 13.493L14.273 14.273M3.958 10H5.057M14.943 10H16.042M5.727 14.273L6.507 13.493M13.493 6.506L14.273 5.727" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const MINI = '<svg width="10" height="2" viewBox="0 0 10 2" fill="none"><rect width="10" height="1.5" rx="0.75" fill="currentColor"/></svg>';
   const GEAR = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M19.4 13a7.5 7.5 0 000-2l1.7-1.3-1.8-3.1-2 .8a7.5 7.5 0 00-1.7-1l-.3-2.1H9.7l-.3 2.1a7.5 7.5 0 00-1.7 1l-2-.8-1.8 3.1L5.6 11a7.5 7.5 0 000 2l-1.7 1.3 1.8 3.1 2-.8a7.5 7.5 0 001.7 1l.3 2.1h4.6l.3-2.1a7.5 7.5 0 001.7-1l2 .8 1.8-3.1L19.4 13z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>';
+  const TRASH = '<svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M4.25 5.75h11.5M8 5.5V4.6a1 1 0 011-1h2a1 1 0 011 1v.9M6.5 5.75l.55 8.35a1.1 1.1 0 001.1 1.02h3.7a1.1 1.1 0 001.1-1.02l.55-8.35M8.6 8.4v4.2M11.4 8.4v4.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const BACK_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const WATCH = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M8.8 8.8a4.5 4.5 0 0 0 0 6.4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M15.2 8.8a4.5 4.5 0 0 1 0 6.4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M6 6a9 9 0 0 0 0 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M18 6a9 9 0 0 1 0 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
   const CHEV = '<svg class="chev" width="8" height="5" viewBox="0 0 8 5" fill="none"><path d="M1 1l3 3 3-3" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -329,7 +333,7 @@
           <span class="ph-title">TypeSet</span>
           <div class="ph-right">
             <button class="icon-btn" id="badgeToggleBtn" title="Toggle badges">${EYE_OPEN}</button>
-            <button class="icon-btn" id="themeBtn" title="Toggle theme">${THEME_DARK}</button>
+            <button class="icon-btn trash-btn" id="trashBtn" title="Scrap all changes">${TRASH}</button>
             <button class="icon-btn" id="settingsBtn" title="Settings">${GEAR}</button>
             <button class="icon-btn" id="minBtn" title="Minimize">${MINI}</button>
           </div>
@@ -419,6 +423,7 @@
             <span class="set-title">Settings</span>
           </div>
           <div class="set-list">
+            <div class="set-row"><span class="set-label">Dark mode</span><button class="set-sw" id="setTheme" role="switch" aria-checked="false"><span class="set-knob"></span></button></div>
             <div class="set-row"><span class="set-label">Show tips</span><button class="set-sw" id="setTips" role="switch" aria-checked="true"><span class="set-knob"></span></button></div>
             <div class="set-hint" style="padding:0 0 4px">Hover tooltips on the toolbar buttons.</div>
             <div class="set-sep"></div>
@@ -446,7 +451,7 @@
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
   const panel = $('panel'), panelInner = panel.querySelector('.panel-inner');
   const selectHint = $('selectHint'), controls = $('controls');
-  const copyBtn = $('copyBtn'), watchBtn = $('watchBtn'), resetBtn = $('resetBtn'), themeBtn = $('themeBtn'), minBtn = $('minBtn');
+  const copyBtn = $('copyBtn'), watchBtn = $('watchBtn'), resetBtn = $('resetBtn'), trashBtn = $('trashBtn'), minBtn = $('minBtn');
   const hoverBox = $('hoverBox'), marquee = $('marquee'), hoverLabel = $('hoverLabel'), phTitle = panel.querySelector('.ph-title');
   const fontPicker = $('fontPicker'), fontTrigger = $('fontTrigger'), fontTriggerName = $('fontTriggerName'), fontList = $('fontList');
 
@@ -556,6 +561,10 @@
 
   const PENCIL_SVG = '<svg viewBox="0 0 16 16" fill="none"><path d="M11.38 6.96L9.06 4.63M11.38 6.96L6.75 11.57c-.13.13-.3.22-.47.26l-1.98.48c-.36.09-.69-.24-.6-.6l.47-1.95c.04-.18.13-.34.26-.47L9.06 4.63M11.38 6.96l.97-.97a1.64 1.64 0 00-2.33-2.32l-.96.96" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const isChanged = el => { const s = el.style; return !!(s.fontFamily || s.fontSize || s.fontWeight || s.lineHeight || s.letterSpacing || s.textAlign || s.maxWidth || s.width || s.padding || s.borderRadius || s.opacity || s.fontStyle || s.textDecoration || (s.transform && s.transform !== 'none')); };
+  const hasPendingChanges = () => { for (const el of edited) if (isChanged(el)) return true; return false; };
+  // Reset fills in when the current selection has something to reset; trash lights up when ANY edit exists.
+  function updateResetState() { resetBtn.classList.toggle('changed', selection.some(isChanged)); }
+  function updateTrashState() { trashBtn.classList.toggle('active', hasPendingChanges()); }
   function updateBadges() {
     badgeNodes.forEach(b => b.node.remove()); badgeNodes.length = 0;
     const seenGroupNums = new Set();
@@ -583,6 +592,7 @@
       root.appendChild(node); badgeNodes.push({ el, node });
     });
     positionBadges();
+    updateResetState(); updateTrashState();
   }
   function positionBadges() {
     badgeNodes.forEach(b => { const r = b.el.getBoundingClientRect(); b.node.style.left = r.left + 'px'; b.node.style.top = r.top + 'px'; });
@@ -680,11 +690,15 @@
   panel.addEventListener('pointercancel', () => { pDrag = false; panel.classList.remove('panel-dragging'); });
   panel.addEventListener('click', () => { if (suppressClick) return; if (minimized) expand(); });
   minBtn.addEventListener('click', e => { e.stopPropagation(); collapse(); });
-  themeBtn.addEventListener('click', e => {
+  // Dark-mode toggle now lives in Settings (panel starts light = panel-light present, so the switch is off).
+  const setThemeSw = $('setTheme');
+  setThemeSw.addEventListener('click', e => {
     e.stopPropagation();
-    const isLight = panel.classList.toggle('panel-light');
-    themeBtn.innerHTML = isLight ? THEME_DARK : THEME_LIGHT;
+    const nowLight = panel.classList.toggle('panel-light');
+    setThemeSw.setAttribute('aria-checked', nowLight ? 'false' : 'true');   // dark on = not light
   });
+  // Trash: scrap every pending change (revert the whole page + reset versions). No-op when nothing's changed.
+  trashBtn.addEventListener('click', e => { e.stopPropagation(); scrapAll(); });
 
   let badgesVisible = true;
   const badgeToggleBtn = root.getElementById('badgeToggleBtn');
@@ -1005,7 +1019,7 @@
     active = selection[selection.length - 1] || null;
     if (active) { const m = new DOMMatrix(getComputedStyle(active).transform); txX = Math.round(m.m41); txY = Math.round(m.m42); syncFrom(active); }
     currentMark = markForSelection();
-    updateHint(); updateSelBoxes(); resyncHeight();
+    updateHint(); updateSelBoxes(); resyncHeight(); updateResetState();
   }
   // additive = shift held: toggle this element in/out of the current selection
   function selectEl(el, additive) {
@@ -1327,12 +1341,23 @@
     commitMark(); saveCurrentVersion(); updateSelBoxes();
     if (active) syncFrom(active);
   }));
+  const RESET_PROPS = ['fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'fontFamily', 'textAlign', 'transform', 'maxWidth', 'width', 'marginTop', 'padding', 'borderRadius', 'opacity', 'fontStyle', 'textDecoration'];
   resetBtn.addEventListener('click', () => {
     if (!selection.length) return; pushUndo();
-    const props = ['fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'fontFamily', 'textAlign', 'transform', 'maxWidth', 'width', 'marginTop', 'padding', 'borderRadius', 'opacity', 'fontStyle', 'textDecoration'];
-    selection.forEach(el => { props.forEach(p => el.style[p] = ''); el.__tsMark = null; });
+    selection.forEach(el => { RESET_PROPS.forEach(p => el.style[p] = ''); el.__tsMark = null; });
     txX = 0; txY = 0; if (active) syncFrom(active); saveCurrentVersion(); updateSelBoxes();
   });
+  // Scrap ALL pending changes: revert every edited element and reset the version/undo state.
+  function scrapAll() {
+    if (!hasPendingChanges()) return;
+    edited.forEach(el => { RESET_PROPS.forEach(p => el.style[p] = ''); el.__tsMark = null; });
+    edited.clear();
+    undoStack.length = 0;
+    versions = [{ name: 'Version 1', styles: [] }]; currentVersionIdx = 0;
+    markCounter = 0; currentMark = null; txX = 0; txY = 0;
+    renderVersionMenu(); updateBadges(); updateSelBoxes();
+    if (active) syncFrom(active);
+  }
 
   // ── Copy CSS as selector blocks ──
   function cssSelector(el) {
@@ -1523,7 +1548,7 @@
   const swTips = $('setTips');
   const setSw = (el, on) => el.setAttribute('aria-checked', on ? 'true' : 'false');
   const swOn = el => el.getAttribute('aria-checked') === 'true';
-  const tipEls = [copyBtn, watchBtn, badgeBtn, themeBtn, settingsBtn, minBtn];
+  const tipEls = [copyBtn, watchBtn, badgeBtn, trashBtn, settingsBtn, minBtn];
   const origTitles = new WeakMap();
   tipEls.forEach(el => origTitles.set(el, el.getAttribute('title') || ''));
   function applyTooltips(on) {
