@@ -830,7 +830,7 @@
     if (par) {
       // Sit up-and-left of the corner so it clears the change badge (which centers on the corner).
       let ft = r.top - 36; if (ft < 4) ft = Math.min(r.top + 4, window.innerHeight - 24);
-      frameBtn.style.left = clamp(r.left - 23, 4, window.innerWidth - 24) + 'px'; frameBtn.style.top = ft + 'px';
+      frameBtn.style.left = clamp(r.left - 40, 4, window.innerWidth - 24) + 'px'; frameBtn.style.top = ft + 'px';
     }
   }
   function startResize(e, side) {
