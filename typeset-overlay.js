@@ -286,13 +286,14 @@
     .ts-handle { position:fixed; width:14px; height:14px; box-sizing:border-box; background:rgba(60,130,247,1);
       border:2px solid #fff; border-radius:50%; box-shadow:0 1px 4px rgba(0,0,0,0.35); cursor:ew-resize;
       z-index:2147483647; pointer-events:auto; display:none; }
-    /* on-canvas "select the frame around this" button — the visible way to climb to the container */
+    /* on-canvas "select the frame around this" button — matches the green multi-select (.group) badge:
+       selecting a container is a "bigger/group" gesture, so it's green, same rounded-square + shadow, no white ring */
     .ts-frame { position:fixed; display:none; align-items:center; justify-content:center;
-      width:24px; height:24px; box-sizing:border-box; background:rgba(60,130,247,1); color:#fff;
-      border:2px solid #fff; border-radius:7px; box-shadow:0 1px 5px rgba(0,0,0,0.4); cursor:pointer;
-      z-index:2147483647; pointer-events:auto; }
-    .ts-frame:hover { background:rgba(40,110,230,1); }
-    .ts-frame svg { width:13px; height:13px; }
+      width:20px; height:20px; box-sizing:border-box; background:#22c55e; color:#fff; border-radius:5px;
+      box-shadow:0 2px 6px rgba(0,0,0,0.2), inset 0 0 0 1px rgba(0,0,0,0.04); cursor:pointer;
+      z-index:2147483647; pointer-events:auto; transition:transform .15s cubic-bezier(.32,.72,0,1); will-change:transform; }
+    .ts-frame:hover { transform:scale(1.1); }
+    .ts-frame svg { width:12px; height:12px; }
     /* dark pill descriptor label (agentation hover tooltip) */
     .ts-label { position:fixed; display:none; z-index:2147483647; pointer-events:none;
       font:500 11px/1.3 system-ui,-apple-system,sans-serif; color:#fff; background:rgba(0,0,0,0.85);
@@ -827,8 +828,8 @@
     handleL.style.left = (r.left - 7) + 'px'; handleL.style.top = (cy - 7) + 'px';
     handleR.style.left = (r.right - 7) + 'px'; handleR.style.top = (cy - 7) + 'px';
     if (par) {
-      let ft = r.top - 30; if (ft < 4) ft = Math.min(r.top + 4, window.innerHeight - 28);
-      frameBtn.style.left = clamp(r.left - 2, 4, window.innerWidth - 28) + 'px'; frameBtn.style.top = ft + 'px';
+      let ft = r.top - 25; if (ft < 4) ft = Math.min(r.top + 4, window.innerHeight - 24);
+      frameBtn.style.left = clamp(r.left - 1, 4, window.innerWidth - 24) + 'px'; frameBtn.style.top = ft + 'px';
     }
   }
   function startResize(e, side) {
