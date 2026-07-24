@@ -868,9 +868,18 @@
   // page's images be selected, dragged, and resized, not just text.
   const MEDIA_TAGS = new Set(['img', 'picture', 'video', 'canvas']);
   const isMedia = el => MEDIA_TAGS.has(el.tagName.toLowerCase());
-  // The "Width" control is polymorphic: a photo resizes by its own `width` (so it grows AND shrinks,
-  // overriding a responsive width:100%), while a text block resizes by `max-width` (its measure).
-  const widthProp = el => isMedia(el) ? 'width' : 'maxWidth';
+  // The "Width" control is polymorphic — it drives whichever CSS property actually governs THIS
+  // element's width, so resize always grows AND shrinks:
+  //   • media (photo/video) → `width` (overrides a responsive width:100%)
+  //   • a text block         → `max-width` (its measure)
+  //   • a wrapper/figure/column → `max-width` if it already has one (raise the cap), else `width`
+  //     (a width:auto block filling its parent can only be shrunk by max-width, never grown — so
+  //      set its width instead). This is what lets a selected figure or gallery resize both ways.
+  const widthProp = el => {
+    if (isMedia(el)) return 'width';
+    if (hasText(el)) return 'maxWidth';
+    return getComputedStyle(el).maxWidth !== 'none' ? 'maxWidth' : 'width';
+  };
   // Climb to the FRAME around this element — the nearest ancestor that's meaningfully BIGGER than
   // the current selection (not a same-bounds styling wrapper), so every "expand" visibly moves the
   // outline. Grab a wrapper (e.g. the column) and resize IT — children, incl. width:100% images,
