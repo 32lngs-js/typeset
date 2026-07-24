@@ -3,82 +3,96 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TypeSet Overlay — Demo</title>
+  <title>TypeSet — Demo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
   <style>
-    :root { color-scheme: light; }
+    :root {
+      color-scheme: light;
+      --bg: #fafafa;
+      --ink: #191817;          /* near-black — headings + emphasis */
+      --body: #5b5955;         /* muted warm gray — running text */
+      --faint: #9b9894;        /* labels, meta, captions */
+      --line: rgba(0,0,0,0.08);
+      --serif: 'Newsreader', Georgia, 'Times New Roman', serif;
+      --sans: system-ui, -apple-system, 'SF Pro Text', 'Segoe UI', sans-serif;
+    }
     * { box-sizing: border-box; }
-    body { margin: 0; font-family: Georgia, 'Times New Roman', serif; color: #1a1a1a; background: #fbfbf9; line-height: 1.6; }
-    .wrap { max-width: 720px; margin: 0 auto; padding: 72px 32px 120px; }
-    .eyebrow { font-family: system-ui, sans-serif; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: #b06a2c; font-weight: 700; margin-bottom: 14px; }
-    h1 { font-size: 46px; line-height: 1.05; margin: 0 0 14px; font-weight: 700; letter-spacing: -0.01em; }
-    h2.tag { font-family: system-ui, sans-serif; font-size: 21px; font-weight: 400; color: #666; margin: 0 0 32px; }
-    p { font-size: 17px; margin: 0 0 20px; }
-    h3 { font-family: system-ui, sans-serif; font-size: 15px; letter-spacing: 0.02em; text-transform: uppercase; color: #999; font-weight: 600; margin: 40px 0 12px; }
-    ul { padding-left: 22px; margin: 0 0 20px; }
-    li { font-size: 17px; margin-bottom: 8px; }
-    .cta { display: inline-block; margin-top: 16px; font-family: system-ui, sans-serif; font-size: 16px; font-weight: 600; background: #1a1a1a; color: #fff; padding: 12px 22px; border-radius: 8px; text-decoration: none; }
-    .note { font-family: system-ui, sans-serif; font-size: 13px; color: #999; margin-top: 64px; padding-top: 20px; border-top: 1px solid #eee; }
+    html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+    body { margin: 0; background: var(--bg); color: var(--body);
+      font-family: var(--sans); font-size: 16px; line-height: 1.7; }
 
-    /* Media — also selectable/editable by the overlay (it can size, position, and round images too) */
-    figure { margin: 36px 0; }
-    figure img { display: block; width: 100%; height: auto; border-radius: 12px; background: #eee; }
-    figure.hero { margin: 0 0 40px; }
-    figure.hero img { aspect-ratio: 3 / 2; object-fit: cover; }
-    figcaption { font-family: system-ui, sans-serif; font-size: 13px; color: #999; margin-top: 10px; line-height: 1.5; }
-    .gallery { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 36px 0; }
-    .gallery img { display: block; width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: 12px; background: #eee; }
+    .wrap { max-width: 588px; margin: 0 auto; padding: 128px 28px 160px; }
+
+    /* header */
+    .eyebrow { font-size: 11px; font-weight: 500; letter-spacing: 0.22em; text-transform: uppercase;
+      color: var(--faint); margin: 0 0 28px; }
+    h1 { font-family: var(--serif); font-weight: 400; font-size: 40px; line-height: 1.1;
+      letter-spacing: -0.015em; color: var(--ink); margin: 0 0 28px; }
+
+    p { margin: 0 0 20px; }
+    .lead { font-size: 19px; line-height: 1.6; color: var(--ink); margin-bottom: 40px; }
+    .lead em { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--body); }
+
+    strong { font-weight: 500; color: var(--ink); }
+    a { color: var(--ink); text-decoration: none; border-bottom: 1px solid var(--line);
+      padding-bottom: 1px; transition: border-color .2s ease; }
+    a:hover { border-bottom-color: var(--ink); }
+
+    /* single framed image */
+    figure { margin: 56px 0; }
+    figure img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10;
+      object-fit: cover; border-radius: 10px; border: 1px solid var(--line); background: #eee; }
+    figcaption { font-size: 12.5px; line-height: 1.55; color: var(--faint); margin-top: 12px; }
+
+    /* section */
+    section { margin-top: 72px; }
+    h2 { font-family: var(--serif); font-weight: 400; font-size: 23px; letter-spacing: -0.01em;
+      color: var(--ink); margin: 0 0 4px; }
+    .rule { width: 36px; height: 1px; background: rgba(0,0,0,0.18); margin: 0 0 22px; }
+
+    .rows { border-top: 1px solid var(--line); }
+    .row { display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+      padding: 14px 0; border-bottom: 1px solid var(--line); }
+    .row-label { color: var(--ink); font-size: 15px; }
+    .row-meta { color: var(--faint); font-size: 13px; white-space: nowrap; }
+
+    .foot { margin-top: 88px; font-size: 12.5px; color: var(--faint); }
+    .foot em { font-family: var(--serif); font-style: italic; }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="eyebrow">Case study</div>
-    <h1>Typography is the interface</h1>
-    <h2 class="tag">Most of a product's voice lives in its type. This page is here so you can scrub it.</h2>
+    <p class="eyebrow">TypeSet</p>
+    <h1>Typography is the interface.</h1>
 
-    <figure class="hero">
+    <p class="lead">A product's voice lives in its type. <em>This page has nothing to sell</em> — it's here so you can grab any word and scrub it.</p>
+
+    <p>Open the panel in the corner, click any piece of text, and edit its size, weight, measure, and face live. <strong>Shift-click</strong> or drag a marquee to change several at once, then <strong>Copy CSS</strong> for real selector blocks you can paste back into your stylesheet.</p>
+
+    <figure>
       <img
         src="https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=1600&q=80"
         alt="A sweeping curve of library shelves stacked with books"
         loading="eager" decoding="async" />
-      <figcaption>Every book on that shelf is a typographic decision. So is every screen you ship.</figcaption>
+      <figcaption>Every shelf is a typographic decision. Select the photo to resize it — or grab its frame to resize the whole figure.</figcaption>
     </figure>
 
-    <p>This is a sample host page. Open the TypeSet overlay (it loads automatically here), then click any text element to inspect and edit its live typography — size, weight, line height, letter spacing, width, and family.</p>
+    <p>Nothing here is precious. Every change is a live inline style, so a reload wipes the slate. <strong>Copy</strong> is how you keep what you like.</p>
 
-    <p>Try the new bits: <strong>shift-click</strong> several elements to select them at once, or <strong>drag a rectangle</strong> across a region to marquee-select. Then scrub a slider and watch every selected element change together. Hit <strong>Copy CSS</strong> and you get one selector block per element.</p>
+    <section>
+      <h2>What you can change</h2>
+      <div class="rule"></div>
+      <div class="rows">
+        <div class="row"><span class="row-label">Size, weight, leading &amp; tracking</span><span class="row-meta">type</span></div>
+        <div class="row"><span class="row-label">Measure &amp; column width</span><span class="row-meta">layout</span></div>
+        <div class="row"><span class="row-label">Family, previewed in place</span><span class="row-meta">30+ faces</span></div>
+        <div class="row"><span class="row-label">Alignment &amp; position</span><span class="row-meta">box</span></div>
+      </div>
+    </section>
 
-    <figure>
-      <img
-        src="https://images.unsplash.com/photo-1487014679447-9f8336841d58?auto=format&fit=crop&w=1200&q=80"
-        alt="A laptop on a desk showing a product landing page"
-        loading="lazy" decoding="async" />
-      <figcaption>Images and media are fair game too — select a figure to resize, reposition, or round it.</figcaption>
-    </figure>
-
-    <h3>What you can change</h3>
-    <ul>
-      <li>Size, weight, line height, and letter spacing</li>
-      <li>Column width (measure) via the Layout slider</li>
-      <li>Font family, previewed in each face</li>
-      <li>Alignment and X / Y position</li>
-    </ul>
-
-    <div class="gallery">
-      <img
-        src="https://images.unsplash.com/photo-1516962126636-27ad087061cc?auto=format&fit=crop&w=900&q=80"
-        alt="A vintage Polaroid instant camera on a white surface"
-        loading="lazy" decoding="async" />
-      <img
-        src="https://images.unsplash.com/photo-1461749280684-dccba630e2f6?auto=format&fit=crop&w=900&q=80"
-        alt="Source code on a dark screen"
-        loading="lazy" decoding="async" />
-    </div>
-
-    <p>Everything you do is a live inline style, so it resets on reload. The Copy button is how you take the values back to your real stylesheet.</p>
-
-    <a class="cta" href="#">Get started</a>
-
-    <div class="note">TypeSet overlay demo. The panel top-right is the tool, not part of this page. Photos via Unsplash.</div>
+    <p class="foot"><em>TypeSet.</em> The panel in the top-right is the tool, not part of this page. Photo via Unsplash.</p>
   </div>
 
   <!-- auto-load the overlay so this page shows it live (relative path -> latest published overlay) -->
