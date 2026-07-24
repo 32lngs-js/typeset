@@ -452,7 +452,7 @@
   function snapOne(el) {
     const s = el.style;
     return { el, fontSize: s.fontSize, fontWeight: s.fontWeight, lineHeight: s.lineHeight,
-             letterSpacing: s.letterSpacing, fontFamily: s.fontFamily, textAlign: s.textAlign, transform: s.transform, maxWidth: s.maxWidth, marginTop: s.marginTop, padding: s.padding, borderRadius: s.borderRadius, opacity: s.opacity, fontStyle: s.fontStyle, textDecoration: s.textDecoration };
+             letterSpacing: s.letterSpacing, fontFamily: s.fontFamily, textAlign: s.textAlign, transform: s.transform, maxWidth: s.maxWidth, width: s.width, marginTop: s.marginTop, padding: s.padding, borderRadius: s.borderRadius, opacity: s.opacity, fontStyle: s.fontStyle, textDecoration: s.textDecoration };
   }
   function pushUndo() { if (selection.length) undoStack.push(selection.map(snapOne)); }
   function popUndo() {
@@ -460,7 +460,7 @@
     entry.forEach(s => {
       const st = s.el.style;
       st.fontSize = s.fontSize; st.fontWeight = s.fontWeight; st.lineHeight = s.lineHeight;
-      st.letterSpacing = s.letterSpacing; st.fontFamily = s.fontFamily; st.textAlign = s.textAlign; st.transform = s.transform; st.maxWidth = s.maxWidth; st.marginTop = s.marginTop; st.padding = s.padding; st.borderRadius = s.borderRadius; st.opacity = s.opacity; st.fontStyle = s.fontStyle; st.textDecoration = s.textDecoration;
+      st.letterSpacing = s.letterSpacing; st.fontFamily = s.fontFamily; st.textAlign = s.textAlign; st.transform = s.transform; st.maxWidth = s.maxWidth; st.width = s.width; st.marginTop = s.marginTop; st.padding = s.padding; st.borderRadius = s.borderRadius; st.opacity = s.opacity; st.fontStyle = s.fontStyle; st.textDecoration = s.textDecoration;
     });
     if (active) { const m = new DOMMatrix(getComputedStyle(active).transform); txX = Math.round(m.m41); txY = Math.round(m.m42); syncFrom(active); }
     saveCurrentVersion(); updateSelBoxes();
@@ -471,7 +471,7 @@
   let currentVersionIdx = 0;
   const badgeNodes = [];  // {el, node}
 
-  const emptySnap = el => ({ el, fontSize: '', fontWeight: '', lineHeight: '', letterSpacing: '', fontFamily: '', textAlign: '', transform: '', maxWidth: '', marginTop: '', padding: '', borderRadius: '', opacity: '', fontStyle: '', textDecoration: '' });
+  const emptySnap = el => ({ el, fontSize: '', fontWeight: '', lineHeight: '', letterSpacing: '', fontFamily: '', textAlign: '', transform: '', maxWidth: '', width: '', marginTop: '', padding: '', borderRadius: '', opacity: '', fontStyle: '', textDecoration: '' });
   // As new elements are touched, backfill every existing version with an empty
   // snapshot so switching to an OLDER version correctly clears them.
   function trackEdited(el) {
@@ -481,11 +481,11 @@
   }
   function captureAllStyles() {
     return [...edited].map(el => ({ el, fontSize: el.style.fontSize, fontWeight: el.style.fontWeight, lineHeight: el.style.lineHeight,
-      letterSpacing: el.style.letterSpacing, fontFamily: el.style.fontFamily, textAlign: el.style.textAlign, transform: el.style.transform, maxWidth: el.style.maxWidth, marginTop: el.style.marginTop, padding: el.style.padding, borderRadius: el.style.borderRadius, opacity: el.style.opacity, fontStyle: el.style.fontStyle, textDecoration: el.style.textDecoration }));
+      letterSpacing: el.style.letterSpacing, fontFamily: el.style.fontFamily, textAlign: el.style.textAlign, transform: el.style.transform, maxWidth: el.style.maxWidth, width: el.style.width, marginTop: el.style.marginTop, padding: el.style.padding, borderRadius: el.style.borderRadius, opacity: el.style.opacity, fontStyle: el.style.fontStyle, textDecoration: el.style.textDecoration }));
   }
   function applyAllStyles(arr) {
     arr.forEach(o => { const s = o.el.style; s.fontSize = o.fontSize; s.fontWeight = o.fontWeight; s.lineHeight = o.lineHeight;
-      s.letterSpacing = o.letterSpacing; s.fontFamily = o.fontFamily; s.textAlign = o.textAlign; s.transform = o.transform; s.maxWidth = o.maxWidth; s.marginTop = o.marginTop; s.padding = o.padding; s.borderRadius = o.borderRadius; s.opacity = o.opacity; s.fontStyle = o.fontStyle; s.textDecoration = o.textDecoration; });
+      s.letterSpacing = o.letterSpacing; s.fontFamily = o.fontFamily; s.textAlign = o.textAlign; s.transform = o.transform; s.maxWidth = o.maxWidth; s.width = o.width; s.marginTop = o.marginTop; s.padding = o.padding; s.borderRadius = o.borderRadius; s.opacity = o.opacity; s.fontStyle = o.fontStyle; s.textDecoration = o.textDecoration; });
   }
   function saveCurrentVersion() { versions[currentVersionIdx].styles = captureAllStyles(); updateBadges(); }
   function switchVersion(idx) {
@@ -547,7 +547,7 @@
   root.addEventListener('click', e => { if (!e.target.closest('#versionWrap')) closeVersionMenu(); });
 
   const PENCIL_SVG = '<svg viewBox="0 0 16 16" fill="none"><path d="M11.38 6.96L9.06 4.63M11.38 6.96L6.75 11.57c-.13.13-.3.22-.47.26l-1.98.48c-.36.09-.69-.24-.6-.6l.47-1.95c.04-.18.13-.34.26-.47L9.06 4.63M11.38 6.96l.97-.97a1.64 1.64 0 00-2.33-2.32l-.96.96" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  const isChanged = el => { const s = el.style; return !!(s.fontFamily || s.fontSize || s.fontWeight || s.lineHeight || s.letterSpacing || s.textAlign || s.maxWidth || s.padding || s.borderRadius || s.opacity || s.fontStyle || s.textDecoration || (s.transform && s.transform !== 'none')); };
+  const isChanged = el => { const s = el.style; return !!(s.fontFamily || s.fontSize || s.fontWeight || s.lineHeight || s.letterSpacing || s.textAlign || s.maxWidth || s.width || s.padding || s.borderRadius || s.opacity || s.fontStyle || s.textDecoration || (s.transform && s.transform !== 'none')); };
   function updateBadges() {
     badgeNodes.forEach(b => b.node.remove()); badgeNodes.length = 0;
     const seenGroupNums = new Set();
@@ -801,7 +801,9 @@
     const show = !!active && selection.length === 1 && selecting() && !minimized;
     handleL.style.display = handleR.style.display = show ? 'block' : 'none';
     if (!show) return;
-    const r = active.getBoundingClientRect(), cy = r.top + r.height / 2;
+    // Keep the dots reachable: for a tall element (e.g. a whole container) the true vertical
+    // center can be off-screen, so ride them at the viewport's middle along the element's edges.
+    const r = active.getBoundingClientRect(), cy = clamp(r.top + r.height / 2, 24, window.innerHeight - 24);
     handleL.style.left = (r.left - 7) + 'px'; handleL.style.top = (cy - 7) + 'px';
     handleR.style.left = (r.right - 7) + 'px'; handleR.style.top = (cy - 7) + 'px';
   }
@@ -809,13 +811,13 @@
     if (!active) return;
     e.preventDefault(); e.stopPropagation();
     canvasBusy = true;
-    const el = active, sx = e.clientX, cs = getComputedStyle(el);
-    const w0 = cs.maxWidth === 'none' ? Math.round(parseFloat(cs.width)) : Math.round(parseFloat(cs.maxWidth));
+    const el = active, sx = e.clientX, cs = getComputedStyle(el), wp = widthProp(el);
+    const w0 = (wp === 'width' || cs.maxWidth === 'none') ? Math.round(parseFloat(cs.width)) : Math.round(parseFloat(cs.maxWidth));
     pushUndo();
     const move = ev => {
       const dx = ev.clientX - sx;
       const w = Math.max(20, Math.round(side === 'r' ? w0 + dx : w0 - dx));   // outward = grow
-      el.style.maxWidth = w + 'px'; trackEdited(el);
+      el.style[wp] = w + 'px'; trackEdited(el);
       vEl('maxWidth').textContent = w + 'px'; updateRowTrack('maxWidth', w);
       positionSelBoxes();
     };
@@ -841,6 +843,20 @@
   // page's images be selected, dragged, and resized, not just text.
   const MEDIA_TAGS = new Set(['img', 'picture', 'video', 'canvas']);
   const isMedia = el => MEDIA_TAGS.has(el.tagName.toLowerCase());
+  // The "Width" control is polymorphic: a photo resizes by its own `width` (so it grows AND shrinks,
+  // overriding a responsive width:100%), while a text block resizes by `max-width` (its measure).
+  const widthProp = el => isMedia(el) ? 'width' : 'maxWidth';
+  // Alt/Option-click climbs to the nearest container ancestor, so you can grab a wrapper (e.g. the
+  // column) and resize IT — every child, including width:100% images, reflows: "expand width at once".
+  function parentPick(el) {
+    let p = el && el.parentElement;
+    while (p && p !== document.body && p !== document.documentElement && p !== hostEl && !hostEl.contains(p)) {
+      const r = p.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0 && !SKIP_TAGS.has(p.tagName.toLowerCase())) return p;
+      p = p.parentElement;
+    }
+    return null;
+  }
   function pickable(el) {
     if (!el || el === hostEl || hostEl.contains(el)) return false;
     if (el === document.documentElement || el === document.body) return false;
@@ -994,7 +1010,15 @@
       }
       return;
     }
-    if (selecting()) { const el = document.elementFromPoint(e.clientX, e.clientY); if (pickable(el)) { boxTo(hoverBox, el); showLabel(el); } else hideHover(); }
+    if (selecting()) {
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      if (e.altKey) {                        // preview the container Alt-click would grab
+        const base = (selection.length === 1 && active && active.contains(el)) ? active : el;
+        const par = parentPick(base);
+        if (par) { boxTo(hoverBox, par); showLabel(par); } else hideHover();
+      }
+      else if (pickable(el)) { boxTo(hoverBox, el); showLabel(el); } else hideHover();
+    }
   }
   function onPU(e) {
     if (!mDown) return;
@@ -1010,7 +1034,12 @@
       if (hits.length) setSelection(mShift ? [...new Set([...selection, ...hits])] : hits);
     } else {
       const el = document.elementFromPoint(e.clientX, e.clientY);
-      if (pickable(el)) selectEl(el, mShift);
+      if (e.altKey) {                        // Alt/Option-click: climb to the container (repeat to go higher)
+        const base = (selection.length === 1 && active && (active === el || active.contains(el))) ? active : el;
+        const par = parentPick(base);
+        if (par) setSelection([par]);
+      }
+      else if (pickable(el)) selectEl(el, mShift);
       else if (!mShift) setSelection([]);    // click empty space clears the selection
     }
     hideHover();
@@ -1103,7 +1132,7 @@
     const lsPx = cs.letterSpacing === 'normal' ? 0 : parseFloat(cs.letterSpacing);
     const ls = Math.round((lsPx / fsz) * 1000) / 1000;
     const mat = new DOMMatrix(cs.transform); txX = Math.round(mat.m41); txY = Math.round(mat.m42);
-    const wid = cs.maxWidth === 'none' ? Math.round(parseFloat(cs.width)) : Math.round(parseFloat(cs.maxWidth));
+    const wid = widthProp(el) === 'width' ? Math.round(parseFloat(cs.width)) : (cs.maxWidth === 'none' ? Math.round(parseFloat(cs.width)) : Math.round(parseFloat(cs.maxWidth)));
     vEl('fontSize').textContent = Math.round(fsz) + 'px';
     vEl('fontWeight').textContent = parseInt(cs.fontWeight) || 400;
     vEl('lineHeight').textContent = lh.toFixed(2);
@@ -1143,7 +1172,7 @@
     if (prop === 'letterSpacing') return Math.round(((cs.letterSpacing === 'normal' ? 0 : parseFloat(cs.letterSpacing)) / fsz) * 1000) / 1000;
     if (prop === 'translateX') return txX;
     if (prop === 'translateY') return txY;
-    if (prop === 'maxWidth') return cs.maxWidth === 'none' ? Math.round(parseFloat(cs.width)) : Math.round(parseFloat(cs.maxWidth));
+    if (prop === 'maxWidth') return widthProp(active) === 'width' ? Math.round(parseFloat(cs.width)) : (cs.maxWidth === 'none' ? Math.round(parseFloat(cs.width)) : Math.round(parseFloat(cs.maxWidth)));
     if (prop === 'padding') return Math.round(parseFloat(cs.paddingTop)) || 0;
     if (prop === 'marginTop') return Math.round(parseFloat(cs.marginTop)) || 0;
     if (prop === 'borderRadius') return Math.round(parseFloat(cs.borderRadius)) || 0;
@@ -1160,7 +1189,7 @@
       else if (prop === 'fontWeight') s.fontWeight = val;
       else if (prop === 'lineHeight') s.lineHeight = val;
       else if (prop === 'letterSpacing') s.letterSpacing = val + 'em';
-      else if (prop === 'maxWidth') s.maxWidth = val + 'px';
+      else if (prop === 'maxWidth') s[widthProp(el)] = val + 'px';
       else if (prop === 'padding') s.padding = val + 'px';
       else if (prop === 'marginTop') s.marginTop = val + 'px';
       else if (prop === 'borderRadius') s.borderRadius = val + 'px';
@@ -1249,7 +1278,7 @@
   }));
   resetBtn.addEventListener('click', () => {
     if (!selection.length) return; pushUndo();
-    const props = ['fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'fontFamily', 'textAlign', 'transform', 'maxWidth', 'marginTop', 'padding', 'borderRadius', 'opacity', 'fontStyle', 'textDecoration'];
+    const props = ['fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'fontFamily', 'textAlign', 'transform', 'maxWidth', 'width', 'marginTop', 'padding', 'borderRadius', 'opacity', 'fontStyle', 'textDecoration'];
     selection.forEach(el => { props.forEach(p => el.style[p] = ''); el.__tsMark = null; });
     txX = 0; txY = 0; if (active) syncFrom(active); saveCurrentVersion(); updateSelBoxes();
   });
@@ -1275,7 +1304,7 @@
   const PROP_MAP = [
     ['fontFamily', 'font-family'], ['fontSize', 'font-size'], ['fontWeight', 'font-weight'],
     ['lineHeight', 'line-height'], ['letterSpacing', 'letter-spacing'], ['textAlign', 'text-align'],
-    ['maxWidth', 'max-width'], ['padding', 'padding'], ['marginTop', 'margin-top'], ['borderRadius', 'border-radius'],
+    ['maxWidth', 'max-width'], ['width', 'width'], ['padding', 'padding'], ['marginTop', 'margin-top'], ['borderRadius', 'border-radius'],
     ['opacity', 'opacity'], ['fontStyle', 'font-style'], ['textDecoration', 'text-decoration'],
   ];
   // Collect the current edited state: blocks (for the clipboard) + mcpChanges (for the agent).
@@ -1291,6 +1320,7 @@
         s.letterSpacing && `letter-spacing: ${s.letterSpacing};`,
         s.textAlign && `text-align: ${s.textAlign};`,
         s.maxWidth && `max-width: ${s.maxWidth};`,
+        s.width && `width: ${s.width};`,
         s.padding && `padding: ${s.padding};`,
         s.marginTop && `margin-top: ${s.marginTop};`,
         s.borderRadius && `border-radius: ${s.borderRadius};`,
