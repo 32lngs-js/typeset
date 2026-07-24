@@ -81,6 +81,10 @@
         border-radius .38s cubic-bezier(.4,0,.2,1),background .2s ease,box-shadow .28s ease;
     }
     #panel.panel-dragging { transition:none; }
+    /* While the panel grows in from the dial, clip the (fixed-width) inner content to the
+       box so it doesn't spill outside and appear to slide in from the right. Restored to
+       overflow:visible on transitionend so dropdowns can escape the box again. */
+    #panel.panel-opening { overflow:hidden; }
     .panel-inner { width:260px; opacity:1; transition:opacity .16s ease; padding:10px 12px 0; overflow-y:auto; max-height:calc(100vh - 40px); -ms-overflow-style:none; scrollbar-width:none; }
     /* scroll without a visible bar — same technique as DialKit's .dialkit-panel-inner */
     .panel-inner::-webkit-scrollbar, .font-list::-webkit-scrollbar { display:none; }
@@ -610,15 +614,28 @@
     }
   });
   panelRO.observe(panelInner);
+  let openFallback = null;
   function expand() {
     if (!minimized) return;
     originX = computeOrigin(); panel.dataset.originX = originX;
     const targetH = panelInner.offsetHeight;
     panel.classList.remove('minimized');
+    // Clip the fixed-width content to the box while it grows in from the dial (see .panel-opening).
+    panel.classList.add('panel-opening');
     panel.style.width = PANEL_W + 'px'; panel.style.height = targetH + 'px'; panel.style.borderRadius = '14px';
     layoutExpanded(); minimized = false;
     document.body && (document.body.style.cursor = 'crosshair');   // select mode on
     updateBadges();
+    // Restore overflow:visible once the width transition finishes so dropdowns can escape again.
+    const onEnd = e => {
+      if (e.target !== panel || e.propertyName !== 'width') return;
+      panel.classList.remove('panel-opening');
+      panel.removeEventListener('transitionend', onEnd);
+      clearTimeout(openFallback);
+    };
+    panel.addEventListener('transitionend', onEnd);
+    clearTimeout(openFallback);
+    openFallback = setTimeout(() => { panel.classList.remove('panel-opening'); panel.removeEventListener('transitionend', onEnd); }, 600);
   }
   function collapse() {
     if (minimized) return;
